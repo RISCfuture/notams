@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+*.log
+.DS_Store
+.git
+.gitignore
+README.md
+tests
+jest.config.js
+.vscode
+.idea
+*.swp
+*.swo

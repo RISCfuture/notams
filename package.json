@@ -1,0 +1,63 @@
+{
+  "name": "notam-service",
+  "version": "1.0.0",
+  "description": "FAA SWIM NOTAM ingestion and API service",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "NODE_ENV=test jest --runInBand",
+    "test:watch": "NODE_ENV=test jest --watch",
+    "test:coverage": "NODE_ENV=test jest --coverage",
+    "migrate": "node dist/scripts/migrate.js",
+    "prune": "node dist/scripts/prune-notams.js",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\""
+  },
+  "keywords": [
+    "notam",
+    "aviation",
+    "faa",
+    "swim"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@sentry/node": "^10.26.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "fast-xml-parser": "^5.3.2",
+    "pg": "^8.16.3",
+    "pino": "^10.1.0",
+    "pino-pretty": "^13.1.2",
+    "solclientjs": "^10.18.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/express": "^5.0.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.6",
+    "@types/stompit": "^0.26.6",
+    "@types/supertest": "^6.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jest": "^30.2.0",
+    "jest-util": "30.2.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "yarn@4.11.0"
+}

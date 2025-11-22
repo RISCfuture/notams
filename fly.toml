@@ -1,0 +1,52 @@
+# Fly.io configuration for NOTAM service
+
+app = "notams"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+
+# Disable auto start/stop - service must always run for JMS ingestion
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+# VM resources
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+# Cron jobs for pruning
+[[services]]
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+# Define scheduled tasks (requires Fly.io Machines feature)
+# To set up the pruning cron job, use:
+# fly machines run . --schedule="0 2 * * *" --entrypoint="node" --arg="dist/scripts/prune-notams.js"
+
+# Example secrets to set:
+# fly secrets set DATABASE_URL=postgresql://...
+# fly secrets set JMS_HOST=swim.faa.gov
+# fly secrets set JMS_PORT=61614
+# fly secrets set JMS_USERNAME=your_username
+# fly secrets set JMS_PASSWORD=your_password
+# fly secrets set JMS_DESTINATION=/topic/faa.notam.all
+# fly secrets set SENTRY_DSN=your_sentry_dsn

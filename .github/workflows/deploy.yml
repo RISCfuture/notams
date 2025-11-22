@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: timcodes
+          SENTRY_PROJECT: notams
+        with:
+          environment: production

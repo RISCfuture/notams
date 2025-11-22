@@ -1,0 +1,53 @@
+[
+  {
+    "notam_id": "FDC 2/1234",
+    "icao_location": "KJFK",
+    "effective_start": "2025-01-15T14:00:00Z",
+    "effective_end": "2025-01-20T23:59:00Z",
+    "schedule": null,
+    "notam_text": "RWY 04L/22R CLSD",
+    "q_line": {
+      "purpose": "N",
+      "scope": "A",
+      "traffic_type": "I"
+    },
+    "purpose": "N",
+    "scope": "A",
+    "traffic_type": "I",
+    "raw_message": null
+  },
+  {
+    "notam_id": "FDC 3/5678",
+    "icao_location": "KLAX",
+    "effective_start": "2025-01-10T08:00:00Z",
+    "effective_end": "2025-01-25T18:00:00Z",
+    "schedule": "0800-1800",
+    "notam_text": "TAXIWAY A CLSD BTN TWY B AND TWY C",
+    "q_line": {
+      "purpose": "B",
+      "scope": "A",
+      "traffic_type": "I"
+    },
+    "purpose": "B",
+    "scope": "A",
+    "traffic_type": "I",
+    "raw_message": null
+  },
+  {
+    "notam_id": "FDC 4/9999",
+    "icao_location": "KORD",
+    "effective_start": "2025-01-05T00:00:00Z",
+    "effective_end": null,
+    "schedule": null,
+    "notam_text": "OBST CRANE 415FT MSL 1NM N OF RWY 10L/28R",
+    "q_line": {
+      "purpose": "N",
+      "scope": "E",
+      "traffic_type": "I"
+    },
+    "purpose": "N",
+    "scope": "E",
+    "traffic_type": "I",
+    "raw_message": null
+  }
+]
