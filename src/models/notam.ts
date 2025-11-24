@@ -1,5 +1,6 @@
 import { pool } from '../config/database';
 import { logger } from '../config/logger';
+import { withRetry } from '../utils/retry';
 
 export interface NOTAM {
   id?: number;
@@ -61,20 +62,24 @@ export class NOTAMModel {
       RETURNING *
     `;
 
+    const queryParams = [
+      notam.notam_id,
+      notam.icao_location,
+      notam.effective_start,
+      notam.effective_end,
+      notam.schedule,
+      notam.notam_text,
+      notam.q_line ? JSON.stringify(notam.q_line) : null,
+      notam.purpose,
+      notam.scope,
+      notam.traffic_type,
+      notam.raw_message,
+    ];
+
     try {
-      const result = await pool.query(query, [
-        notam.notam_id,
-        notam.icao_location,
-        notam.effective_start,
-        notam.effective_end,
-        notam.schedule,
-        notam.notam_text,
-        notam.q_line ? JSON.stringify(notam.q_line) : null,
-        notam.purpose,
-        notam.scope,
-        notam.traffic_type,
-        notam.raw_message,
-      ]);
+      const result = await withRetry(async () => {
+        return await pool.query(query, queryParams);
+      });
 
       logger.info({ notam_id: notam.notam_id }, 'NOTAM created/updated');
       return result.rows[0];

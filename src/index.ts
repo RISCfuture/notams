@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { createServer } from './server';
-import { testConnection, closePool } from './config/database';
+import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database';
 import { logger } from './config/logger';
 import { NOTAMIngestionService } from './services/notam-ingestion';
 
@@ -20,6 +20,10 @@ async function main() {
       logger.error('Failed to connect to database, exiting');
       process.exit(1);
     }
+
+    // Start database health monitoring
+    startHealthCheck();
+    logger.info('Database health monitoring started');
 
     // Create and start Express server
     const app = createServer();
@@ -53,6 +57,9 @@ async function main() {
       if (ingestionService) {
         await ingestionService.stop();
       }
+
+      // Stop health monitoring
+      stopHealthCheck();
 
       // Close database pool
       await closePool();

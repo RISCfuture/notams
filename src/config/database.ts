@@ -15,12 +15,25 @@ const getDatabaseUrl = (): string => {
   return process.env.DATABASE_URL;
 };
 
-const poolConfig: PoolConfig = {
-  connectionString: getDatabaseUrl(),
-  max: isTest ? 5 : 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+const getPoolConfig = (): PoolConfig => {
+  const maxConnections = parseInt(process.env.DB_POOL_MAX || '30', 10);
+  const idleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '60000', 10);
+  const connectionTimeout = parseInt(process.env.DB_CONNECTION_TIMEOUT || '30000', 10);
+  const statementTimeout = parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000', 10);
+
+  return {
+    connectionString: getDatabaseUrl(),
+    max: isTest ? 5 : maxConnections,
+    idleTimeoutMillis: idleTimeout,
+    connectionTimeoutMillis: connectionTimeout,
+    statement_timeout: statementTimeout,
+    query_timeout: statementTimeout,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+  };
 };
+
+const poolConfig: PoolConfig = getPoolConfig();
 
 export const pool = new Pool(poolConfig);
 
@@ -48,4 +61,36 @@ export const testConnection = async (): Promise<boolean> => {
 export const closePool = async (): Promise<void> => {
   await pool.end();
   logger.info('Database pool closed');
+};
+
+export const getPoolStats = () => ({
+  total: pool.totalCount,
+  idle: pool.idleCount,
+  waiting: pool.waitingCount,
+});
+
+let healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+export const startHealthCheck = (): void => {
+  if (healthCheckInterval) {
+    return;
+  }
+
+  healthCheckInterval = setInterval(async () => {
+    try {
+      const client = await pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+      logger.debug({ poolStats: getPoolStats() }, 'Pool health check passed');
+    } catch (error) {
+      logger.error({ error, poolStats: getPoolStats() }, 'Pool health check failed');
+    }
+  }, 30000);
+};
+
+export const stopHealthCheck = (): void => {
+  if (healthCheckInterval) {
+    clearInterval(healthCheckInterval);
+    healthCheckInterval = null;
+  }
 };

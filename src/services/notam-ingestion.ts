@@ -2,8 +2,10 @@ import * as solace from 'solclientjs';
 import * as Sentry from '@sentry/node';
 import { getSolaceConfig } from '../config/jms';
 import { logger } from '../config/logger';
+import { getPoolStats } from '../config/database';
 import { NOTAMParser } from './notam-parser';
 import { NOTAMModel } from '../models/notam';
+import { CircuitBreaker } from '../utils/circuit-breaker';
 
 export class NOTAMIngestionService {
   private session: solace.Session | null = null;
@@ -11,10 +13,12 @@ export class NOTAMIngestionService {
   private parser: NOTAMParser;
   private notamModel: NOTAMModel;
   private isRunning = false;
+  private circuitBreaker: CircuitBreaker;
 
   constructor() {
     this.parser = new NOTAMParser();
     this.notamModel = new NOTAMModel();
+    this.circuitBreaker = new CircuitBreaker();
 
     // Initialize Solace factory
     const factoryProps = new solace.SolclientFactoryProperties();
@@ -166,6 +170,16 @@ export class NOTAMIngestionService {
    * Handle incoming message
    */
   private async handleMessage(message: solace.Message): Promise<void> {
+    // Check circuit breaker before processing
+    if (!this.circuitBreaker.isRequestAllowed()) {
+      logger.warn(
+        { circuitBreakerState: this.circuitBreaker.getState() },
+        'Circuit breaker open, skipping message processing'
+      );
+      // Don't acknowledge - let message stay in queue for redelivery
+      return;
+    }
+
     try {
       // Try to get message payload in different formats
       let messageBody: string | null = null;
@@ -210,11 +224,33 @@ export class NOTAMIngestionService {
       // Process the message
       await this.processMessage(messageBody);
 
+      // Record success for circuit breaker
+      this.circuitBreaker.recordSuccess();
+
       // Acknowledge the message
       message.acknowledge();
     } catch (error) {
       logger.error({ error }, 'Error handling message');
-      Sentry.captureException(error);
+
+      // Record failure for circuit breaker
+      this.circuitBreaker.recordFailure(error);
+
+      // Get circuit breaker state for logging
+      const cbState = this.circuitBreaker.getState();
+
+      // Capture exception with enhanced context
+      Sentry.captureException(error, {
+        tags: {
+          error_type: 'message_processing',
+          circuit_breaker_open: cbState.isOpen,
+          circuit_breaker_failures: cbState.failures,
+        },
+        contexts: {
+          database: {
+            pool_stats: getPoolStats(),
+          },
+        },
+      });
 
       // Negative acknowledge - message will be redelivered
       // Note: Solace automatically redelivers on client failure
