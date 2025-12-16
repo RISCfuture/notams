@@ -1,12 +1,12 @@
 # Multi-stage build for efficiency
 
 # Stage 1: Build
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
-# Enable Corepack for Yarn 4
-RUN corepack enable
+# Install and enable Corepack for Yarn 4 (not bundled in Node.js 25+)
+RUN npm install -g corepack && corepack enable
 
 # Copy package files and Yarn config
 COPY package.json yarn.lock .yarnrc.yml ./
@@ -23,12 +23,12 @@ COPY migrations ./migrations
 RUN yarn build
 
 # Stage 2: Production
-FROM node:22-alpine
+FROM node:25-alpine
 
 WORKDIR /app
 
-# Enable Corepack for Yarn 4
-RUN corepack enable
+# Install and enable Corepack for Yarn 4 (not bundled in Node.js 25+)
+RUN npm install -g corepack && corepack enable
 
 # Copy package files and Yarn config
 COPY package.json yarn.lock .yarnrc.yml ./
