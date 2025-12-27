@@ -5,11 +5,9 @@ FROM node:25-alpine AS builder
 
 WORKDIR /app
 
-# Install and enable Corepack for Yarn 4 (not bundled in Node.js 25+)
-RUN npm install -g corepack && corepack enable
-
-# Copy package files and Yarn config
+# Copy package files, Yarn config, and bundled Yarn release
 COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/releases ./.yarn/releases
 
 # Install ALL dependencies (including devDependencies for build)
 RUN yarn install --immutable
@@ -26,9 +24,6 @@ RUN yarn build
 FROM node:25-alpine
 
 WORKDIR /app
-
-# Install and enable Corepack for Yarn 4 (not bundled in Node.js 25+)
-RUN npm install -g corepack && corepack enable
 
 # Copy package files and Yarn config
 COPY package.json yarn.lock .yarnrc.yml ./

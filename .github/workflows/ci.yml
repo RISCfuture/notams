@@ -29,8 +29,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Run tests
@@ -49,8 +47,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Run ESLint
