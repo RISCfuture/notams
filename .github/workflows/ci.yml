@@ -58,4 +58,4 @@ jobs:
       - name: Check formatting
         run: yarn format:check
       - name: Type check
-        run: yarn tsc --noEmit
+        run: yarn type-check
