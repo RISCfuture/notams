@@ -2,7 +2,9 @@ import express, { Express } from 'express';
 import * as Sentry from '@sentry/node';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/error-handler';
+import { metricsMiddleware } from './middleware/metrics';
 import healthRouter from './routes/health';
+import metricsRouter from './routes/metrics';
 import notamsRouter from './routes/notams';
 
 export const createServer = (): Express => {
@@ -35,7 +37,11 @@ export const createServer = (): Express => {
     next();
   });
 
+  // Metrics middleware (must be before routes to track request durations)
+  app.use(metricsMiddleware);
+
   // Routes
+  app.use('/', metricsRouter);
   app.use('/', healthRouter);
   app.use('/api', notamsRouter);
 

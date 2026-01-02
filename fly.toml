@@ -31,6 +31,11 @@ primary_region = "sjc"
   cpus = 1
   memory_mb = 512
 
+# Prometheus metrics endpoint
+[metrics]
+  port = 8080
+  path = "/metrics"
+
 # Cron jobs for pruning
 [[services]]
   [services.concurrency]

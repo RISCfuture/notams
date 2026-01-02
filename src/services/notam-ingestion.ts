@@ -6,6 +6,15 @@ import { getPoolStats } from '../config/database';
 import { NOTAMParser } from './notam-parser';
 import { NOTAMModel } from '../models/notam';
 import { CircuitBreaker } from '../utils/circuit-breaker';
+import {
+  jmsConnectionStatus,
+  jmsMessagesReceivedTotal,
+  jmsReconnectAttemptsTotal,
+  notamsIngestedTotal,
+  notamIngestionDuration,
+  circuitBreakerState,
+  circuitBreakerFailuresTotal,
+} from '../config/metrics';
 
 export class NOTAMIngestionService {
   private session: solace.Session | null = null;
@@ -82,6 +91,7 @@ export class NOTAMIngestionService {
     this.session.on(solace.SessionEventCode.UP_NOTICE, () => {
       logger.info('Connected to Solace broker');
       this.isRunning = true;
+      jmsConnectionStatus.set({ broker: 'solace' }, 1);
       this.subscribeToQueue(queueName);
     });
 
@@ -93,6 +103,7 @@ export class NOTAMIngestionService {
     this.session.on(solace.SessionEventCode.DISCONNECTED, () => {
       logger.warn('Disconnected from Solace broker');
       this.isRunning = false;
+      jmsConnectionStatus.set({ broker: 'solace' }, 0);
 
       if (this.messageConsumer) {
         this.messageConsumer.dispose();
@@ -102,10 +113,13 @@ export class NOTAMIngestionService {
 
     this.session.on(solace.SessionEventCode.RECONNECTING_NOTICE, () => {
       logger.info('Reconnecting to Solace broker');
+      jmsReconnectAttemptsTotal.inc({ success: 'pending' });
     });
 
     this.session.on(solace.SessionEventCode.RECONNECTED_NOTICE, () => {
       logger.info('Reconnected to Solace broker');
+      jmsConnectionStatus.set({ broker: 'solace' }, 1);
+      jmsReconnectAttemptsTotal.inc({ success: 'true' });
     });
 
     this.session.on(solace.SessionEventCode.SUBSCRIPTION_ERROR, (sessionEvent) => {
@@ -170,10 +184,17 @@ export class NOTAMIngestionService {
    * Handle incoming message
    */
   private async handleMessage(message: solace.Message): Promise<void> {
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
+
+    // Update circuit breaker state metric
+    const cbState = this.circuitBreaker.getState();
+    circuitBreakerState.set({ name: 'ingestion' }, cbState.isOpen ? 1 : 0);
+
     // Check circuit breaker before processing
     if (!this.circuitBreaker.isRequestAllowed()) {
       logger.warn(
-        { circuitBreakerState: this.circuitBreaker.getState() },
+        { circuitBreakerState: cbState },
         'Circuit breaker open, skipping message processing'
       );
       // Don't acknowledge - let message stay in queue for redelivery
@@ -219,6 +240,9 @@ export class NOTAMIngestionService {
         return;
       }
 
+      // Increment messages received counter
+      jmsMessagesReceivedTotal.inc({ queue: 'notam-queue' });
+
       logger.info({ messageLength: messageBody.length }, 'Received NOTAM message');
 
       // Process the message
@@ -230,20 +254,23 @@ export class NOTAMIngestionService {
       // Acknowledge the message
       message.acknowledge();
     } catch (error) {
+      success = 'false';
       logger.error({ error }, 'Error handling message');
 
       // Record failure for circuit breaker
       this.circuitBreaker.recordFailure(error);
 
-      // Get circuit breaker state for logging
-      const cbState = this.circuitBreaker.getState();
+      // Update circuit breaker metrics
+      circuitBreakerFailuresTotal.inc({ name: 'ingestion', error_type: 'processing' });
+      const newCbState = this.circuitBreaker.getState();
+      circuitBreakerState.set({ name: 'ingestion' }, newCbState.isOpen ? 1 : 0);
 
       // Capture exception with enhanced context
       Sentry.captureException(error, {
         tags: {
           error_type: 'message_processing',
-          circuit_breaker_open: cbState.isOpen,
-          circuit_breaker_failures: cbState.failures,
+          circuit_breaker_open: newCbState.isOpen,
+          circuit_breaker_failures: newCbState.failures,
         },
         contexts: {
           database: {
@@ -254,6 +281,9 @@ export class NOTAMIngestionService {
 
       // Negative acknowledge - message will be redelivered
       // Note: Solace automatically redelivers on client failure
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      notamIngestionDuration.observe({ success }, duration);
     }
   }
 
@@ -263,8 +293,11 @@ export class NOTAMIngestionService {
   private async processMessage(messageBody: string): Promise<void> {
     // Determine message format and parse
     let notam;
+    let sourceFormat = 'text';
+
     if (messageBody.trim().startsWith('<')) {
       // XML/AIXM format
+      sourceFormat = 'aixm';
       notam = this.parser.parseAIXMMessage(messageBody);
     } else {
       // Text format
@@ -282,6 +315,10 @@ export class NOTAMIngestionService {
     // Save to database
     try {
       await this.notamModel.create(notam);
+      notamsIngestedTotal.inc({
+        icao_location: notam.icao_location,
+        source_format: sourceFormat,
+      });
       logger.info({ notam_id: notam.notam_id }, 'NOTAM ingested successfully');
     } catch (error) {
       logger.error({ error, notam_id: notam.notam_id }, 'Failed to save NOTAM to database');
@@ -325,6 +362,7 @@ export class NOTAMIngestionService {
     }
 
     this.isRunning = false;
+    jmsConnectionStatus.set({ broker: 'solace' }, 0);
     logger.info('NOTAM ingestion service stopped');
   }
 

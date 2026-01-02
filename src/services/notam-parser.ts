@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { NOTAM, QLine } from '../models/notam';
 import { logger } from '../config/logger';
+import { notamParseErrorsTotal } from '../config/metrics';
 
 // Type for parsed XML data (dynamic structure from XML parser)
 type ParsedXMLData = Record<string, unknown>;
@@ -24,24 +25,28 @@ export class NOTAMParser {
       // Navigate the AIXM structure (guessed based on AIXM 5.1)
       const message = parsed.AIXMBasicMessage || parsed['aixm:AIXMBasicMessage'];
       if (!message) {
+        notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'missing_message' });
         logger.warn('No AIXMBasicMessage found in XML');
         return null;
       }
 
       const member = message.hasMember || message['aixm:hasMember'];
       if (!member) {
+        notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'missing_member' });
         logger.warn('No hasMember found in AIXM message');
         return null;
       }
 
       const event = member.Event || member['event:Event'] || member['aixm:Event'];
       if (!event) {
+        notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'missing_event' });
         logger.warn('No Event found in AIXM message');
         return null;
       }
 
       const timeSlice = event.timeSlice || event['event:timeSlice'] || event['aixm:timeSlice'];
       if (!timeSlice) {
+        notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'missing_timeslice' });
         logger.warn('No timeSlice found in Event');
         return null;
       }
@@ -51,6 +56,7 @@ export class NOTAMParser {
         timeSlice['event:EventTimeSlice'] ||
         timeSlice['aixm:EventTimeSlice'];
       if (!eventTimeSlice) {
+        notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'missing_eventtimeslice' });
         logger.warn('No EventTimeSlice found');
         return null;
       }
@@ -64,6 +70,7 @@ export class NOTAMParser {
 
       return this.extractNOTAMFromData(notamData, eventTimeSlice, xmlString);
     } catch (error) {
+      notamParseErrorsTotal.inc({ format: 'aixm', error_type: 'xml_exception' });
       logger.error({ error, xmlString }, 'Failed to parse AIXM XML');
       return null;
     }
@@ -277,12 +284,14 @@ export class NOTAMParser {
       }
 
       if (!notam.notam_id || !notam.icao_location || !notam.effective_start) {
+        notamParseErrorsTotal.inc({ format: 'text', error_type: 'missing_fields' });
         logger.warn('Incomplete text NOTAM, missing required fields');
         return null;
       }
 
       return notam as NOTAM;
     } catch (error) {
+      notamParseErrorsTotal.inc({ format: 'text', error_type: 'parse_exception' });
       logger.error({ error, text }, 'Failed to parse text NOTAM');
       return null;
     }

@@ -1,6 +1,7 @@
 import { Pool, PoolConfig } from 'pg';
 import * as Sentry from '@sentry/node';
 import { logger } from './logger';
+import { dbPoolConnections } from './metrics';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -40,6 +41,13 @@ const poolConfig: PoolConfig = getPoolConfig();
 
 export const pool = new Pool(poolConfig);
 
+// Update pool connection metrics
+const updatePoolMetrics = (): void => {
+  dbPoolConnections.set({ state: 'total' }, pool.totalCount);
+  dbPoolConnections.set({ state: 'idle' }, pool.idleCount);
+  dbPoolConnections.set({ state: 'waiting' }, pool.waitingCount);
+};
+
 // Handle errors on idle clients in the pool
 // This prevents connection termination errors from crashing the process
 pool.on('error', (err, _client) => {
@@ -66,6 +74,19 @@ pool.on('error', (err, _client) => {
 
 pool.on('connect', () => {
   logger.debug('New database connection established');
+  updatePoolMetrics();
+});
+
+pool.on('acquire', () => {
+  updatePoolMetrics();
+});
+
+pool.on('release', () => {
+  updatePoolMetrics();
+});
+
+pool.on('remove', () => {
+  updatePoolMetrics();
 });
 
 export const testConnection = async (): Promise<boolean> => {

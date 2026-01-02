@@ -1,6 +1,7 @@
 import { pool } from '../config/database';
 import { logger } from '../config/logger';
 import { withRetry } from '../utils/retry';
+import { dbQueryDuration, notamDuplicatesTotal } from '../config/metrics';
 
 export interface NOTAM {
   id?: number;
@@ -59,7 +60,7 @@ export class NOTAMModel {
         traffic_type = EXCLUDED.traffic_type,
         raw_message = EXCLUDED.raw_message,
         updated_at = NOW()
-      RETURNING *
+      RETURNING *, (xmax = 0) AS inserted
     `;
 
     const queryParams = [
@@ -76,28 +77,46 @@ export class NOTAMModel {
       notam.raw_message,
     ];
 
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
+
     try {
       const result = await withRetry(async () => {
         return await pool.query(query, queryParams);
       });
 
+      // Track duplicate (upsert) vs insert
+      if (!result.rows[0].inserted) {
+        notamDuplicatesTotal.inc();
+      }
+
       logger.info({ notam_id: notam.notam_id }, 'NOTAM created/updated');
       return result.rows[0];
     } catch (error) {
+      success = 'false';
       logger.error({ error, notam_id: notam.notam_id }, 'Failed to create/update NOTAM');
       throw error;
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      dbQueryDuration.observe({ operation: 'upsert', success }, duration);
     }
   }
 
   async findById(notam_id: string): Promise<NOTAM | null> {
     const query = 'SELECT * FROM notams WHERE notam_id = $1';
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
 
     try {
       const result = await pool.query(query, [notam_id]);
       return result.rows[0] || null;
     } catch (error) {
+      success = 'false';
       logger.error({ error, notam_id }, 'Failed to find NOTAM by ID');
       throw error;
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      dbQueryDuration.observe({ operation: 'select', success }, duration);
     }
   }
 
@@ -144,13 +163,20 @@ export class NOTAMModel {
 
     values.push(limit, offset);
 
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
+
     try {
       const result = await pool.query(query, values);
       logger.debug({ count: result.rows.length, filters }, 'NOTAMs retrieved');
       return result.rows;
     } catch (error) {
+      success = 'false';
       logger.error({ error, filters }, 'Failed to query NOTAMs');
       throw error;
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      dbQueryDuration.observe({ operation: 'select', success }, duration);
     }
   }
 
@@ -161,13 +187,20 @@ export class NOTAMModel {
         AND effective_end < NOW() - INTERVAL '1 day' * $1
     `;
 
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
+
     try {
       const result = await pool.query(query, [olderThanDays]);
       logger.info({ count: result.rowCount, olderThanDays }, 'Expired NOTAMs deleted');
       return result.rowCount || 0;
     } catch (error) {
+      success = 'false';
       logger.error({ error }, 'Failed to delete expired NOTAMs');
       throw error;
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      dbQueryDuration.observe({ operation: 'delete', success }, duration);
     }
   }
 
@@ -195,12 +228,19 @@ export class NOTAMModel {
 
     const query = `SELECT COUNT(*) FROM notams ${whereClause}`;
 
+    const startTime = process.hrtime.bigint();
+    let success = 'true';
+
     try {
       const result = await pool.query(query, values);
       return parseInt(result.rows[0].count, 10);
     } catch (error) {
+      success = 'false';
       logger.error({ error }, 'Failed to count NOTAMs');
       throw error;
+    } finally {
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
+      dbQueryDuration.observe({ operation: 'count', success }, duration);
     }
   }
 }
