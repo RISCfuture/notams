@@ -1,12 +1,24 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import * as Sentry from '@sentry/node';
 import { createServer } from './server';
 import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database';
 import { logger } from './config/logger';
 import { NOTAMIngestionService } from './services/notam-ingestion';
 
 const PORT = process.env.PORT || 8080;
+
+// Global error handlers to prevent crashes from unhandled errors
+process.on('uncaughtException', (error: Error) => {
+  logger.error({ error }, 'Uncaught exception - process will continue');
+  Sentry.captureException(error);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error({ reason }, 'Unhandled promise rejection');
+  Sentry.captureException(reason);
+});
 
 let ingestionService: NOTAMIngestionService | null = null;
 

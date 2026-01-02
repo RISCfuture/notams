@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { pool } from '../config/database';
 import { logger } from '../config/logger';
+import { withRetry } from '../utils/retry';
 
 export interface AuthenticatedRequest extends Request {
   token?: {
@@ -34,9 +35,8 @@ export const authenticateToken = async (
 
   try {
     // Verify token exists and is active in database
-    const result = await pool.query(
-      'SELECT id, name FROM api_tokens WHERE token = $1 AND is_active = TRUE',
-      [token]
+    const result = await withRetry(() =>
+      pool.query('SELECT id, name FROM api_tokens WHERE token = $1 AND is_active = TRUE', [token])
     );
 
     if (result.rows.length === 0) {
@@ -45,10 +45,10 @@ export const authenticateToken = async (
       return;
     }
 
-    // Update last_used_at timestamp
-    await pool.query('UPDATE api_tokens SET last_used_at = NOW() WHERE id = $1', [
-      result.rows[0].id,
-    ]);
+    // Update last_used_at timestamp (fire-and-forget with retry, don't block auth)
+    withRetry(() =>
+      pool.query('UPDATE api_tokens SET last_used_at = NOW() WHERE id = $1', [result.rows[0].id])
+    ).catch((err) => logger.warn({ err }, 'Failed to update token last_used_at'));
 
     // Attach token info to request
     req.token = {

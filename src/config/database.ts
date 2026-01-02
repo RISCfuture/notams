@@ -1,4 +1,5 @@
 import { Pool, PoolConfig } from 'pg';
+import * as Sentry from '@sentry/node';
 import { logger } from './logger';
 
 const isTest = process.env.NODE_ENV === 'test';
@@ -30,6 +31,8 @@ const getPoolConfig = (): PoolConfig => {
     query_timeout: statementTimeout,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000,
+    // Allow pool to cleanly remove idle clients that have errored
+    allowExitOnIdle: true,
   };
 };
 
@@ -37,8 +40,28 @@ const poolConfig: PoolConfig = getPoolConfig();
 
 export const pool = new Pool(poolConfig);
 
-pool.on('error', (err) => {
-  logger.error({ err }, 'Unexpected error on idle database client');
+// Handle errors on idle clients in the pool
+// This prevents connection termination errors from crashing the process
+pool.on('error', (err, _client) => {
+  logger.error(
+    {
+      err,
+      poolStats: {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount,
+      },
+    },
+    'Unexpected error on idle database client'
+  );
+  Sentry.captureException(err, {
+    tags: { component: 'database-pool' },
+    extra: {
+      poolTotal: pool.totalCount,
+      poolIdle: pool.idleCount,
+      poolWaiting: pool.waitingCount,
+    },
+  });
 });
 
 pool.on('connect', () => {
