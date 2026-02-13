@@ -6,11 +6,25 @@ const prettierConfig = require('eslint-config-prettier');
 module.exports = [
   // Ignore patterns
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '.pnp.cjs'],
   },
 
   // Base ESLint recommended rules
   eslint.configs.recommended,
+
+  // JavaScript config files
+  {
+    files: ['**/*.js', '**/*.cjs'],
+    languageOptions: {
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'writable',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+  },
 
   // TypeScript files configuration
   {
@@ -20,7 +34,7 @@ module.exports = [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tsconfig.json',
+        project: './tsconfig.eslint.json',
       },
       globals: {
         console: 'readonly',

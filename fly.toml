@@ -17,6 +17,10 @@ primary_region = "sjc"
   auto_stop_machines = false
   auto_start_machines = false
   min_machines_running = 1
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
 
   [[http_service.checks]]
     interval = "30s"
@@ -35,13 +39,6 @@ primary_region = "sjc"
 [metrics]
   port = 8080
   path = "/metrics"
-
-# Cron jobs for pruning
-[[services]]
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 100
-    soft_limit = 80
 
 # Define scheduled tasks (requires Fly.io Machines feature)
 # To set up the pruning cron job, use:
