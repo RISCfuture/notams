@@ -158,7 +158,7 @@ export class NOTAMModel {
       SELECT * FROM notams
       ${whereClause}
       ORDER BY effective_start DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+      LIMIT $${paramIndex++} OFFSET $${paramIndex}
     `;
 
     values.push(limit, offset);
@@ -220,7 +220,7 @@ export class NOTAMModel {
     }
 
     if (filters?.end) {
-      conditions.push(`effective_start <= $${paramIndex++}`);
+      conditions.push(`effective_start <= $${paramIndex}`);
       values.push(filters.end);
     }
 

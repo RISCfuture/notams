@@ -68,7 +68,7 @@ describe('NOTAM Pruning', () => {
       notam_id: 'ACTIVE_NOTAM',
       icao_location: 'KORD',
       effective_start: new Date(),
-      effective_end: new Date('2025-12-31T23:59:59Z'),
+      effective_end: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       schedule: null,
       notam_text: 'ACTIVE NOTAM',
       q_line: null,
