@@ -7,7 +7,7 @@ import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './
 import { logger } from './config/logger';
 import { NOTAMIngestionService } from './services/notam-ingestion';
 
-const PORT = process.env.PORT || 8080;
+const PORT = parseInt(process.env.PORT || '8080', 10);
 
 // Global error handlers to prevent crashes from unhandled errors
 process.on('uncaughtException', (error: Error) => {
@@ -39,7 +39,7 @@ async function main() {
 
     // Create and start Express server
     const app = createServer();
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info({ port: PORT }, 'HTTP server listening');
     });
 
