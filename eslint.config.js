@@ -1,90 +1,59 @@
-const eslint = require('@eslint/js');
-const tseslint = require('@typescript-eslint/eslint-plugin');
-const tsparser = require('@typescript-eslint/parser');
-const prettierConfig = require('eslint-config-prettier');
+const eslint = require('@eslint/js')
+const tseslint = require('typescript-eslint')
+const globals = require('globals')
 
-module.exports = [
-  // Ignore patterns
-  {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '.pnp.cjs'],
-  },
-
-  // Base ESLint recommended rules
+module.exports = tseslint.config(
+  { ignores: ['dist', 'coverage', 'scripts', '.pnp.cjs', '.pnp.loader.mjs'] },
   eslint.configs.recommended,
-
-  // JavaScript config files
+  ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
   {
-    files: ['**/*.js', '**/*.cjs'],
     languageOptions: {
-      globals: {
-        require: 'readonly',
-        module: 'readonly',
-        exports: 'writable',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-      },
-    },
-  },
-
-  // TypeScript files configuration
-  {
-    files: ['**/*.ts'],
-    languageOptions: {
-      parser: tsparser,
       parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-        project: './tsconfig.eslint.json',
-      },
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-        exports: 'writable',
-        Buffer: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
+        projectService: {
+          allowDefaultProject: ['*.js', '*.cjs', '*.mjs'],
+        },
+        tsconfigRootDir: __dirname,
       },
     },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
+  {
+    files: ['src/**/*.ts'],
+    languageOptions: { globals: { ...globals.node } },
     rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
       'no-console': 'warn',
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
   },
-
-  // Test files configuration
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', 'tests/**/*.ts'],
-    languageOptions: {
-      globals: {
-        describe: 'readonly',
-        test: 'readonly',
-        it: 'readonly',
-        expect: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        jest: 'readonly',
-      },
+    files: ['tests/**/*.ts'],
+    languageOptions: { globals: { ...globals.node, ...globals.jest } },
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
     },
   },
-
-  // Prettier config (must be last to override other configs)
-  prettierConfig,
-];
+  {
+    files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: { ...globals.node } },
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+)

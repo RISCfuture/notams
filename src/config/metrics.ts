@@ -1,33 +1,36 @@
-import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client';
+import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom-client'
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production'
 
 // Create a custom registry (recommended for Fly.io)
-export const metricsRegistry = new Registry();
+export const metricsRegistry = new Registry()
 
 // Only collect default Node.js metrics in production
 if (isProduction) {
-  collectDefaultMetrics({ register: metricsRegistry });
+  collectDefaultMetrics({ register: metricsRegistry })
 }
 
 // No-op implementations for non-production environments
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const noop = () => {}
+
 const noopCounter = {
-  inc: () => {},
+  inc: noop,
   labels: () => noopCounter,
-};
+}
 
 const noopHistogram = {
-  observe: () => {},
+  observe: noop,
   labels: () => noopHistogram,
-  startTimer: () => () => {},
-};
+  startTimer: () => noop,
+}
 
 const noopGauge = {
-  set: () => {},
-  inc: () => {},
-  dec: () => {},
+  set: noop,
+  inc: noop,
+  dec: noop,
   labels: () => noopGauge,
-};
+}
 
 // ============ INGESTION METRICS ============
 
@@ -38,7 +41,7 @@ export const notamsIngestedTotal = isProduction
       labelNames: ['icao_location', 'source_format'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'icao_location' | 'source_format'>);
+  : (noopCounter as unknown as Counter<'icao_location' | 'source_format'>)
 
 export const notamIngestionDuration = isProduction
   ? new Histogram({
@@ -48,7 +51,7 @@ export const notamIngestionDuration = isProduction
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
       registers: [metricsRegistry],
     })
-  : (noopHistogram as unknown as Histogram<'success'>);
+  : (noopHistogram as unknown as Histogram<'success'>)
 
 export const notamParseErrorsTotal = isProduction
   ? new Counter({
@@ -57,7 +60,7 @@ export const notamParseErrorsTotal = isProduction
       labelNames: ['format', 'error_type'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'format' | 'error_type'>);
+  : (noopCounter as unknown as Counter<'format' | 'error_type'>)
 
 export const notamDuplicatesTotal = isProduction
   ? new Counter({
@@ -65,7 +68,7 @@ export const notamDuplicatesTotal = isProduction
       help: 'Total number of duplicate NOTAMs received (upserted)',
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<string>);
+  : (noopCounter as unknown as Counter)
 
 // ============ API METRICS ============
 
@@ -76,7 +79,7 @@ export const httpRequestsTotal = isProduction
       labelNames: ['method', 'path', 'status_code'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'method' | 'path' | 'status_code'>);
+  : (noopCounter as unknown as Counter<'method' | 'path' | 'status_code'>)
 
 export const httpRequestDuration = isProduction
   ? new Histogram({
@@ -86,7 +89,7 @@ export const httpRequestDuration = isProduction
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
       registers: [metricsRegistry],
     })
-  : (noopHistogram as unknown as Histogram<'method' | 'path' | 'status_code'>);
+  : (noopHistogram as unknown as Histogram<'method' | 'path' | 'status_code'>)
 
 // ============ DATABASE METRICS ============
 
@@ -97,7 +100,7 @@ export const dbPoolConnections = isProduction
       labelNames: ['state'] as const,
       registers: [metricsRegistry],
     })
-  : (noopGauge as unknown as Gauge<'state'>);
+  : (noopGauge as unknown as Gauge<'state'>)
 
 export const dbQueryDuration = isProduction
   ? new Histogram({
@@ -107,7 +110,7 @@ export const dbQueryDuration = isProduction
       buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
       registers: [metricsRegistry],
     })
-  : (noopHistogram as unknown as Histogram<'operation' | 'success'>);
+  : (noopHistogram as unknown as Histogram<'operation' | 'success'>)
 
 // ============ CIRCUIT BREAKER METRICS ============
 
@@ -118,7 +121,7 @@ export const circuitBreakerState = isProduction
       labelNames: ['name'] as const,
       registers: [metricsRegistry],
     })
-  : (noopGauge as unknown as Gauge<'name'>);
+  : (noopGauge as unknown as Gauge<'name'>)
 
 export const circuitBreakerFailuresTotal = isProduction
   ? new Counter({
@@ -127,7 +130,7 @@ export const circuitBreakerFailuresTotal = isProduction
       labelNames: ['name', 'error_type'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'name' | 'error_type'>);
+  : (noopCounter as unknown as Counter<'name' | 'error_type'>)
 
 // ============ JMS/SOLACE METRICS ============
 
@@ -138,7 +141,7 @@ export const jmsConnectionStatus = isProduction
       labelNames: ['broker'] as const,
       registers: [metricsRegistry],
     })
-  : (noopGauge as unknown as Gauge<'broker'>);
+  : (noopGauge as unknown as Gauge<'broker'>)
 
 export const jmsMessagesReceivedTotal = isProduction
   ? new Counter({
@@ -147,7 +150,7 @@ export const jmsMessagesReceivedTotal = isProduction
       labelNames: ['queue'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'queue'>);
+  : (noopCounter as unknown as Counter<'queue'>)
 
 export const jmsReconnectAttemptsTotal = isProduction
   ? new Counter({
@@ -156,4 +159,4 @@ export const jmsReconnectAttemptsTotal = isProduction
       labelNames: ['success'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'success'>);
+  : (noopCounter as unknown as Counter<'success'>)

@@ -103,6 +103,7 @@ yarn migrate
 ```
 
 This will:
+
 - Create the `notams` table
 - Create the `api_tokens` table
 - Insert a default development API token: `dev-token-12345`
@@ -116,6 +117,7 @@ psql -U notams -d notams_development -c "\dt"
 ```
 
 You should see:
+
 ```
            List of relations
  Schema |    Name     | Type  | Owner
@@ -131,6 +133,7 @@ psql -U notams -d notams_development -c "SELECT token, name FROM api_tokens;"
 ```
 
 You should see:
+
 ```
       token       |       name
 ------------------+-------------------
@@ -169,6 +172,7 @@ curl http://localhost:8080/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "ok",
@@ -185,6 +189,7 @@ curl -H "Authorization: Bearer dev-token-12345" \
 ```
 
 Expected response (initially empty):
+
 ```json
 {
   "data": [],

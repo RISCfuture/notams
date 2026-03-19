@@ -1,8 +1,8 @@
-import { Router, Request, Response } from 'express';
-import { metricsRegistry } from '../config/metrics';
-import { logger } from '../config/logger';
+import { Router, Request, Response } from 'express'
+import { metricsRegistry } from '../config/metrics'
+import { logger } from '../config/logger'
 
-const router = Router();
+const router = Router()
 
 /**
  * Prometheus metrics endpoint
@@ -10,13 +10,13 @@ const router = Router();
  */
 router.get('/metrics', async (_req: Request, res: Response) => {
   try {
-    const metrics = await metricsRegistry.metrics();
-    res.set('Content-Type', metricsRegistry.contentType);
-    res.send(metrics);
+    const metrics = await metricsRegistry.metrics()
+    res.set('Content-Type', metricsRegistry.contentType)
+    res.send(metrics)
   } catch (error) {
-    logger.error({ error }, 'Error generating metrics');
-    res.status(500).send('Error generating metrics');
+    logger.error({ error }, 'Error generating metrics')
+    res.status(500).send('Error generating metrics')
   }
-});
+})
 
-export default router;
+export default router

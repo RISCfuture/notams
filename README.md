@@ -70,6 +70,7 @@ The service will start on `http://localhost:8080`.
 For comprehensive API documentation including all endpoints, parameters, response formats, and client examples, see **[API_USAGE.md](./API_USAGE.md)**.
 
 **Quick Example:**
+
 ```bash
 # Health check (no auth required)
 curl http://localhost:8080/health
@@ -252,6 +253,7 @@ yarn migrate
 **Deploy Workflow:** Automatically deploys to Fly.io when CI passes on `main` branch, and creates a Sentry release.
 
 **Required GitHub Secrets:**
+
 - `FLY_API_TOKEN` - Get with `fly tokens create deploy`
 - `SENTRY_AUTH_TOKEN` - From Sentry Settings → API → Auth Tokens
 

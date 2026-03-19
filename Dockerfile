@@ -1,32 +1,40 @@
 # Multi-stage build for efficiency
 
 # Stage 1: Build
-FROM node:25-alpine AS builder
+FROM node:25.6-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files, Yarn config, and bundled Yarn release
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn/releases ./.yarn/releases
+# Copy package files
+COPY package.json yarn.lock ./
+
+# Install and enable corepack to manage Yarn via packageManager field
+RUN npm install -g --force corepack
+RUN corepack enable
 
 # Install ALL dependencies (including devDependencies for build)
 RUN yarn install --immutable
 
 # Copy source code
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.app.json ./
 COPY src ./src
 COPY migrations ./migrations
+COPY scripts ./scripts
 
 # Build TypeScript
 RUN yarn build
 
 # Stage 2: Production
-FROM node:25-alpine
+FROM node:25.6-alpine
 
 WORKDIR /app
 
-# Copy package files and Yarn config
-COPY package.json yarn.lock .yarnrc.yml ./
+# Copy package files
+COPY package.json yarn.lock ./
+
+# Install and enable corepack to manage Yarn via packageManager field
+RUN npm install -g --force corepack
+RUN corepack enable
 
 # Create non-root user first
 RUN addgroup -g 1001 -S nodejs && \

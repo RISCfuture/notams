@@ -1,11 +1,11 @@
-import * as solace from 'solclientjs';
-import * as Sentry from '@sentry/node';
-import { getSolaceConfig } from '../config/jms';
-import { logger } from '../config/logger';
-import { getPoolStats } from '../config/database';
-import { NOTAMParser } from './notam-parser';
-import { NOTAMModel } from '../models/notam';
-import { CircuitBreaker } from '../utils/circuit-breaker';
+import * as solace from 'solclientjs'
+import * as Sentry from '@sentry/node'
+import { getSolaceConfig } from '../config/jms'
+import { logger } from '../config/logger'
+import { getPoolStats } from '../config/database'
+import { NOTAMParser } from './notam-parser'
+import { NOTAMModel } from '../models/notam'
+import { CircuitBreaker } from '../utils/circuit-breaker'
 import {
   jmsConnectionStatus,
   jmsMessagesReceivedTotal,
@@ -14,40 +14,40 @@ import {
   notamIngestionDuration,
   circuitBreakerState,
   circuitBreakerFailuresTotal,
-} from '../config/metrics';
+} from '../config/metrics'
 
 export class NOTAMIngestionService {
-  private session: solace.Session | null = null;
-  private messageConsumer: solace.MessageConsumer | null = null;
-  private parser: NOTAMParser;
-  private notamModel: NOTAMModel;
-  private isRunning = false;
-  private circuitBreaker: CircuitBreaker;
+  private session: solace.Session | null = null
+  private messageConsumer: solace.MessageConsumer | null = null
+  private parser: NOTAMParser
+  private notamModel: NOTAMModel
+  private isRunning = false
+  private circuitBreaker: CircuitBreaker
 
   constructor() {
-    this.parser = new NOTAMParser();
-    this.notamModel = new NOTAMModel();
-    this.circuitBreaker = new CircuitBreaker();
+    this.parser = new NOTAMParser()
+    this.notamModel = new NOTAMModel()
+    this.circuitBreaker = new CircuitBreaker()
 
     // Initialize Solace factory
-    const factoryProps = new solace.SolclientFactoryProperties();
-    factoryProps.profile = solace.SolclientFactoryProfiles.version10;
-    solace.SolclientFactory.init(factoryProps);
+    const factoryProps = new solace.SolclientFactoryProperties()
+    factoryProps.profile = solace.SolclientFactoryProfiles.version10
+    solace.SolclientFactory.init(factoryProps)
 
-    logger.info('Solace factory initialized');
+    logger.info('Solace factory initialized')
   }
 
   /**
    * Start the Solace ingestion service
    */
-  async start(): Promise<void> {
+  start(): void {
     if (this.isRunning) {
-      logger.warn('Ingestion service already running');
-      return;
+      logger.warn('Ingestion service already running')
+      return
     }
 
     try {
-      const config = getSolaceConfig();
+      const config = getSolaceConfig()
 
       // Create session properties
       const sessionProperties = new solace.SessionProperties({
@@ -64,21 +64,21 @@ export class NOTAMIngestionService {
         generateReceiveTimestamps: false,
         includeSenderId: false,
         generateSequenceNumber: false,
-      });
+      })
 
       // Create session
-      this.session = solace.SolclientFactory.createSession(sessionProperties);
+      this.session = solace.SolclientFactory.createSession(sessionProperties)
 
       // Set up event listeners
-      this.setupEventListeners(config.queueName);
+      this.setupEventListeners(config.queueName)
 
       // Connect
-      logger.info({ url: config.url, vpn: config.vpnName }, 'Connecting to Solace broker');
-      this.session.connect();
+      logger.info({ url: config.url, vpn: config.vpnName }, 'Connecting to Solace broker')
+      this.session.connect()
     } catch (error) {
-      logger.error({ error }, 'Failed to start ingestion service');
-      Sentry.captureException(error);
-      throw error;
+      logger.error({ error }, 'Failed to start ingestion service')
+      Sentry.captureException(error)
+      throw error
     }
   }
 
@@ -86,46 +86,50 @@ export class NOTAMIngestionService {
    * Set up session event listeners
    */
   private setupEventListeners(queueName: string): void {
-    if (!this.session) return;
+    if (!this.session) return
 
     this.session.on(solace.SessionEventCode.UP_NOTICE, () => {
-      logger.info('Connected to Solace broker');
-      this.isRunning = true;
-      jmsConnectionStatus.set({ broker: 'solace' }, 1);
-      this.subscribeToQueue(queueName);
-    });
+      logger.info('Connected to Solace broker')
+      this.isRunning = true
+      jmsConnectionStatus.set({ broker: 'solace' }, 1)
+      this.subscribeToQueue(queueName)
+    })
 
     this.session.on(solace.SessionEventCode.CONNECT_FAILED_ERROR, (sessionEvent) => {
-      logger.error({ error: sessionEvent.toString() }, 'Connection failed');
-      Sentry.captureException(new Error(`Connection failed: ${sessionEvent.toString()}`));
-    });
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const eventStr = String(sessionEvent)
+      logger.error({ error: eventStr }, 'Connection failed')
+      Sentry.captureException(new Error(`Connection failed: ${eventStr}`))
+    })
 
     this.session.on(solace.SessionEventCode.DISCONNECTED, () => {
-      logger.warn('Disconnected from Solace broker');
-      this.isRunning = false;
-      jmsConnectionStatus.set({ broker: 'solace' }, 0);
+      logger.warn('Disconnected from Solace broker')
+      this.isRunning = false
+      jmsConnectionStatus.set({ broker: 'solace' }, 0)
 
       if (this.messageConsumer) {
-        this.messageConsumer.dispose();
-        this.messageConsumer = null;
+        this.messageConsumer.dispose()
+        this.messageConsumer = null
       }
-    });
+    })
 
     this.session.on(solace.SessionEventCode.RECONNECTING_NOTICE, () => {
-      logger.info('Reconnecting to Solace broker');
-      jmsReconnectAttemptsTotal.inc({ success: 'pending' });
-    });
+      logger.info('Reconnecting to Solace broker')
+      jmsReconnectAttemptsTotal.inc({ success: 'pending' })
+    })
 
     this.session.on(solace.SessionEventCode.RECONNECTED_NOTICE, () => {
-      logger.info('Reconnected to Solace broker');
-      jmsConnectionStatus.set({ broker: 'solace' }, 1);
-      jmsReconnectAttemptsTotal.inc({ success: 'true' });
-    });
+      logger.info('Reconnected to Solace broker')
+      jmsConnectionStatus.set({ broker: 'solace' }, 1)
+      jmsReconnectAttemptsTotal.inc({ success: 'true' })
+    })
 
     this.session.on(solace.SessionEventCode.SUBSCRIPTION_ERROR, (sessionEvent) => {
-      logger.error({ error: sessionEvent.toString() }, 'Subscription error');
-      Sentry.captureException(new Error(`Subscription error: ${sessionEvent.toString()}`));
-    });
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const eventStr = String(sessionEvent)
+      logger.error({ error: eventStr }, 'Subscription error')
+      Sentry.captureException(new Error(`Subscription error: ${eventStr}`))
+    })
   }
 
   /**
@@ -133,18 +137,18 @@ export class NOTAMIngestionService {
    */
   private subscribeToQueue(queueName: string): void {
     if (!this.session) {
-      logger.error('Cannot subscribe: session not initialized');
-      return;
+      logger.error('Cannot subscribe: session not initialized')
+      return
     }
 
     try {
-      logger.info({ queueName }, 'Attempting to subscribe to queue');
+      logger.info({ queueName }, 'Attempting to subscribe to queue')
 
       // Create queue descriptor
       const queueDescriptor = new solace.QueueDescriptor({
         name: queueName,
         type: solace.QueueType.QUEUE,
-      });
+      })
 
       // Create message consumer
       this.messageConsumer = this.session.createMessageConsumer({
@@ -153,30 +157,30 @@ export class NOTAMIngestionService {
         createIfMissing: false, // Queue already exists in SCDS
         windowSize: 10,
         activeIndicationEnabled: true,
-      });
+      })
 
       // Set up consumer event listeners
       this.messageConsumer.on(solace.MessageConsumerEventName.UP, () => {
-        logger.info({ queue: queueName }, 'Message consumer connected to queue');
-      });
+        logger.info({ queue: queueName }, 'Message consumer connected to queue')
+      })
 
       this.messageConsumer.on(solace.MessageConsumerEventName.DOWN, () => {
-        logger.warn('Message consumer disconnected from queue');
-      });
+        logger.warn('Message consumer disconnected from queue')
+      })
 
       this.messageConsumer.on(solace.MessageConsumerEventName.CONNECT_FAILED_ERROR, () => {
-        logger.error('Failed to connect message consumer to queue');
-      });
+        logger.error('Failed to connect message consumer to queue')
+      })
 
       this.messageConsumer.on(solace.MessageConsumerEventName.MESSAGE, (message) => {
-        this.handleMessage(message);
-      });
+        void this.handleMessage(message)
+      })
 
       // Connect the consumer
-      this.messageConsumer.connect();
+      this.messageConsumer.connect()
     } catch (error) {
-      logger.error({ error, queue: queueName }, 'Failed to subscribe to queue');
-      Sentry.captureException(error);
+      logger.error({ error, queue: queueName }, 'Failed to subscribe to queue')
+      Sentry.captureException(error)
     }
   }
 
@@ -184,46 +188,46 @@ export class NOTAMIngestionService {
    * Handle incoming message
    */
   private async handleMessage(message: solace.Message): Promise<void> {
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
+    const startTime = process.hrtime.bigint()
+    let success = 'true'
 
     // Update circuit breaker state metric
-    const cbState = this.circuitBreaker.getState();
-    circuitBreakerState.set({ name: 'ingestion' }, cbState.isOpen ? 1 : 0);
+    const cbState = this.circuitBreaker.getState()
+    circuitBreakerState.set({ name: 'ingestion' }, cbState.isOpen ? 1 : 0)
 
     // Check circuit breaker before processing
     if (!this.circuitBreaker.isRequestAllowed()) {
       logger.warn(
         { circuitBreakerState: cbState },
-        'Circuit breaker open, skipping message processing'
-      );
+        'Circuit breaker open, skipping message processing',
+      )
       // Don't acknowledge - let message stay in queue for redelivery
-      return;
+      return
     }
 
     try {
       // Try to get message payload in different formats
-      let messageBody: string | null = null;
+      let messageBody: string | null = null
 
       // Try binary attachment first
-      const binaryPayload = message.getBinaryAttachment();
+      const binaryPayload = message.getBinaryAttachment()
       if (binaryPayload) {
-        messageBody = binaryPayload.toString();
+        messageBody = binaryPayload.toString()
       }
 
       // Try XML content
       if (!messageBody) {
-        const xmlContent = message.getXmlContent();
+        const xmlContent = message.getXmlContent()
         if (xmlContent) {
-          messageBody = xmlContent;
+          messageBody = xmlContent
         }
       }
 
       // Try SDT container
       if (!messageBody) {
-        const sdtContainer = message.getSdtContainer();
+        const sdtContainer = message.getSdtContainer()
         if (sdtContainer) {
-          messageBody = JSON.stringify(sdtContainer);
+          messageBody = JSON.stringify(sdtContainer)
         }
       }
 
@@ -234,56 +238,56 @@ export class NOTAMIngestionService {
             destination: message.getDestination()?.getName(),
             userPropertyMap: message.getUserPropertyMap(),
           },
-          'Received message with no extractable payload'
-        );
-        message.acknowledge();
-        return;
+          'Received message with no extractable payload',
+        )
+        message.acknowledge()
+        return
       }
 
       // Increment messages received counter
-      jmsMessagesReceivedTotal.inc({ queue: 'notam-queue' });
+      jmsMessagesReceivedTotal.inc({ queue: 'notam-queue' })
 
-      logger.info({ messageLength: messageBody.length }, 'Received NOTAM message');
+      logger.info({ messageLength: messageBody.length }, 'Received NOTAM message')
 
       // Process the message
-      await this.processMessage(messageBody);
+      await this.processMessage(messageBody)
 
       // Record success for circuit breaker
-      this.circuitBreaker.recordSuccess();
+      this.circuitBreaker.recordSuccess()
 
       // Acknowledge the message
-      message.acknowledge();
+      message.acknowledge()
     } catch (error) {
-      success = 'false';
-      logger.error({ error }, 'Error handling message');
+      success = 'false'
+      logger.error({ error }, 'Error handling message')
 
       // Record failure for circuit breaker
-      this.circuitBreaker.recordFailure(error);
+      this.circuitBreaker.recordFailure(error)
 
       // Update circuit breaker metrics
-      circuitBreakerFailuresTotal.inc({ name: 'ingestion', error_type: 'processing' });
-      const newCbState = this.circuitBreaker.getState();
-      circuitBreakerState.set({ name: 'ingestion' }, newCbState.isOpen ? 1 : 0);
+      circuitBreakerFailuresTotal.inc({ name: 'ingestion', error_type: 'processing' })
+      const newCbState = this.circuitBreaker.getState()
+      circuitBreakerState.set({ name: 'ingestion' }, newCbState.isOpen ? 1 : 0)
 
       // Capture exception with enhanced context
       Sentry.captureException(error, {
         tags: {
           error_type: 'message_processing',
-          circuit_breaker_open: newCbState.isOpen,
-          circuit_breaker_failures: newCbState.failures,
+          circuit_breaker_open: String(newCbState.isOpen),
+          circuit_breaker_failures: String(newCbState.failures),
         },
         contexts: {
           database: {
             pool_stats: getPoolStats(),
           },
         },
-      });
+      })
 
       // Negative acknowledge - message will be redelivered
       // Note: Solace automatically redelivers on client failure
     } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      notamIngestionDuration.observe({ success }, duration);
+      const duration = Number(process.hrtime.bigint() - startTime) / 1e9
+      notamIngestionDuration.observe({ success }, duration)
     }
   }
 
@@ -292,84 +296,84 @@ export class NOTAMIngestionService {
    */
   private async processMessage(messageBody: string): Promise<void> {
     // Determine message format and parse
-    let notam;
-    let sourceFormat = 'text';
+    let notam
+    let sourceFormat = 'text'
 
     if (messageBody.trim().startsWith('<')) {
       // XML/AIXM format
-      sourceFormat = 'aixm';
-      notam = this.parser.parseAIXMMessage(messageBody);
+      sourceFormat = 'aixm'
+      notam = this.parser.parseAIXMMessage(messageBody)
     } else {
       // Text format
-      notam = this.parser.parseTextNOTAM(messageBody);
+      notam = this.parser.parseTextNOTAM(messageBody)
     }
 
     if (!notam) {
       logger.debug(
         { messagePreview: messageBody.substring(0, 300) },
-        'Failed to parse NOTAM message, skipping'
-      );
-      return;
+        'Failed to parse NOTAM message, skipping',
+      )
+      return
     }
 
     // Save to database
     try {
-      await this.notamModel.create(notam);
+      await this.notamModel.create(notam)
       notamsIngestedTotal.inc({
         icao_location: notam.icao_location,
         source_format: sourceFormat,
-      });
-      logger.info({ notam_id: notam.notam_id }, 'NOTAM ingested successfully');
+      })
+      logger.info({ notam_id: notam.notam_id }, 'NOTAM ingested successfully')
     } catch (error) {
-      logger.error({ error, notam_id: notam.notam_id }, 'Failed to save NOTAM to database');
-      throw error;
+      logger.error({ error, notam_id: notam.notam_id }, 'Failed to save NOTAM to database')
+      throw error
     }
   }
 
   /**
    * Stop the ingestion service gracefully
    */
-  async stop(): Promise<void> {
+  stop(): void {
     if (!this.isRunning) {
-      logger.warn('Ingestion service not running');
-      return;
+      logger.warn('Ingestion service not running')
+      return
     }
 
-    logger.info('Stopping NOTAM ingestion service');
+    logger.info('Stopping NOTAM ingestion service')
 
     // Disconnect message consumer
     if (this.messageConsumer) {
       try {
-        this.messageConsumer.disconnect();
-        this.messageConsumer.dispose();
-        this.messageConsumer = null;
-        logger.info('Message consumer disconnected');
+        this.messageConsumer.disconnect()
+        this.messageConsumer.dispose()
+        this.messageConsumer = null
+        logger.info('Message consumer disconnected')
       } catch (error) {
-        logger.error({ error }, 'Error disconnecting message consumer');
+        logger.error({ error }, 'Error disconnecting message consumer')
       }
     }
 
     // Disconnect session
     if (this.session) {
       try {
-        this.session.disconnect();
-        this.session.dispose();
-        this.session = null;
-        logger.info('Session disconnected');
+        this.session.disconnect()
+        this.session.dispose()
+        this.session = null
+        logger.info('Session disconnected')
       } catch (error) {
-        logger.error({ error }, 'Error disconnecting session');
+        logger.error({ error }, 'Error disconnecting session')
       }
     }
 
-    this.isRunning = false;
-    jmsConnectionStatus.set({ broker: 'solace' }, 0);
-    logger.info('NOTAM ingestion service stopped');
+    this.isRunning = false
+    jmsConnectionStatus.set({ broker: 'solace' }, 0)
+    logger.info('NOTAM ingestion service stopped')
   }
 
   /**
    * Check if service is running
    */
   isServiceRunning(): boolean {
-    return this.isRunning;
+    return this.isRunning
   }
 }

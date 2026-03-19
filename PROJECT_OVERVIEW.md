@@ -3,6 +3,7 @@
 ## What Is This?
 
 A production-ready TypeScript Express.js service that:
+
 - **Ingests** NOTAMs from FAA SWIM via JMS (Java Messaging Service)
 - **Stores** them in PostgreSQL with efficient indexing
 - **Serves** them via a RESTful HTTP JSON API with bearer token authentication
@@ -67,20 +68,20 @@ Scheduled Job:
 
 ## Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Language** | TypeScript 5.3 | Type safety, better DX |
-| **Runtime** | Node.js 22 | JavaScript runtime |
-| **Framework** | Express.js 4 | HTTP server |
-| **Database** | PostgreSQL 17 | Relational data storage |
-| **JMS Client** | solclientjs | Solace messaging client |
-| **XML Parser** | fast-xml-parser | Parse AIXM messages |
-| **Validation** | zod | Runtime type validation |
-| **Logging** | pino + pino-pretty | Structured JSON logs |
-| **Error Tracking** | Sentry | Production error monitoring |
-| **Testing** | Jest + Supertest | Unit & integration tests |
-| **Code Quality** | ESLint + Prettier | Linting and formatting |
-| **Deployment** | Fly.io + Docker | Container orchestration |
+| Layer              | Technology         | Purpose                     |
+| ------------------ | ------------------ | --------------------------- |
+| **Language**       | TypeScript 5.3     | Type safety, better DX      |
+| **Runtime**        | Node.js 22         | JavaScript runtime          |
+| **Framework**      | Express.js 4       | HTTP server                 |
+| **Database**       | PostgreSQL 17      | Relational data storage     |
+| **JMS Client**     | solclientjs        | Solace messaging client     |
+| **XML Parser**     | fast-xml-parser    | Parse AIXM messages         |
+| **Validation**     | zod                | Runtime type validation     |
+| **Logging**        | pino + pino-pretty | Structured JSON logs        |
+| **Error Tracking** | Sentry             | Production error monitoring |
+| **Testing**        | Jest + Supertest   | Unit & integration tests    |
+| **Code Quality**   | ESLint + Prettier  | Linting and formatting      |
+| **Deployment**     | Fly.io + Docker    | Container orchestration     |
 
 ## Project Structure
 
@@ -153,6 +154,7 @@ notams/
 ## Database Schema
 
 ### `notams` Table
+
 ```sql
 - id (SERIAL PRIMARY KEY)
 - notam_id (VARCHAR UNIQUE) -- e.g., "FDC 2/1234"
@@ -173,6 +175,7 @@ Indexes: icao_location, effective_start, effective_end, created_at, purpose, sco
 ```
 
 ### `api_tokens` Table
+
 ```sql
 - id (SERIAL PRIMARY KEY)
 - token (VARCHAR UNIQUE)
@@ -187,6 +190,7 @@ Indexes: icao_location, effective_start, effective_end, created_at, purpose, sco
 See [API_USAGE.md](./API_USAGE.md) for comprehensive API documentation including all endpoints, parameters, response formats, and client examples.
 
 **Summary:**
+
 - `GET /health` - Health check (no auth)
 - `GET /api/notams` - Query NOTAMs with filters (auth required)
 - `GET /api/notams/:id` - Get single NOTAM (auth required)

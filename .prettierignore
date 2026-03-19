@@ -1,6 +1,9 @@
-node_modules
 dist
+node_modules
 coverage
+.yarn
+.pnp.cjs
+.pnp.loader.mjs
 *.log
 .env
 .env.local

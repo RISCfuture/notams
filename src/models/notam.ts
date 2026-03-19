@@ -1,42 +1,100 @@
-import { pool } from '../config/database';
-import { logger } from '../config/logger';
-import { withRetry } from '../utils/retry';
-import { dbQueryDuration, notamDuplicatesTotal } from '../config/metrics';
+import { pool } from '../config/database'
+import { logger } from '../config/logger'
+import { withRetry } from '../utils/retry'
+import { dbQueryDuration, notamDuplicatesTotal } from '../config/metrics'
 
 export interface NOTAM {
-  id?: number;
-  notam_id: string;
-  icao_location: string;
-  effective_start: Date;
-  effective_end: Date | null;
-  schedule: string | null;
-  notam_text: string;
-  q_line: QLine | null;
-  purpose: string | null;
-  scope: string | null;
-  traffic_type: string | null;
-  raw_message: string | null;
-  created_at?: Date;
-  updated_at?: Date;
+  id?: number
+  notam_id: string
+  icao_location: string
+  effective_start: Date
+  effective_end: Date | null
+  schedule: string | null
+  notam_text: string
+  q_line: QLine | null
+  purpose: string | null
+  scope: string | null
+  traffic_type: string | null
+  raw_message: string | null
+  created_at?: Date
+  updated_at?: Date
 }
 
 export interface QLine {
-  purpose?: string;
-  scope?: string;
-  traffic_type?: string;
-  lower_altitude?: string;
-  upper_altitude?: string;
-  coordinates?: string;
+  purpose?: string
+  scope?: string
+  traffic_type?: string
+  lower_altitude?: string
+  upper_altitude?: string
+  coordinates?: string
 }
 
 export interface NOTAMQueryFilters {
-  location?: string;
-  start?: Date;
-  end?: Date;
-  purpose?: string;
-  scope?: string;
-  limit?: number;
-  offset?: number;
+  location?: string
+  start?: Date
+  end?: Date
+  purpose?: string
+  scope?: string
+  limit?: number
+  offset?: number
+}
+
+interface WhereClause {
+  clause: string
+  values: (string | Date | number)[]
+  nextParam: number
+}
+
+function buildWhereClause(filters: NOTAMQueryFilters | undefined): WhereClause {
+  const conditions: string[] = []
+  const values: (string | Date | number)[] = []
+  let paramIndex = 1
+
+  if (filters?.location) {
+    conditions.push(`icao_location = $${paramIndex++}`)
+    values.push(filters.location)
+  }
+
+  if (filters?.start) {
+    conditions.push(`(effective_end IS NULL OR effective_end >= $${paramIndex++})`)
+    values.push(filters.start)
+  }
+
+  if (filters?.end) {
+    conditions.push(`effective_start <= $${paramIndex++}`)
+    values.push(filters.end)
+  }
+
+  if (filters?.purpose) {
+    conditions.push(`purpose = $${paramIndex++}`)
+    values.push(filters.purpose)
+  }
+
+  if (filters?.scope) {
+    conditions.push(`scope = $${paramIndex++}`)
+    values.push(filters.scope)
+  }
+
+  return {
+    clause: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+    values,
+    nextParam: paramIndex,
+  }
+}
+
+async function withQueryMetrics<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+  const startTime = process.hrtime.bigint()
+  let success = 'true'
+
+  try {
+    return await fn()
+  } catch (error) {
+    success = 'false'
+    throw error
+  } finally {
+    const duration = Number(process.hrtime.bigint() - startTime) / 1e9
+    dbQueryDuration.observe({ operation, success }, duration)
+  }
 }
 
 export class NOTAMModel {
@@ -61,7 +119,7 @@ export class NOTAMModel {
         raw_message = EXCLUDED.raw_message,
         updated_at = NOW()
       RETURNING *, (xmax = 0) AS inserted
-    `;
+    `
 
     const queryParams = [
       notam.notam_id,
@@ -75,172 +133,102 @@ export class NOTAMModel {
       notam.scope,
       notam.traffic_type,
       notam.raw_message,
-    ];
+    ]
 
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
+    return withQueryMetrics('upsert', async () => {
+      try {
+        const result = await withRetry(async () => {
+          return await pool.query(query, queryParams)
+        })
 
-    try {
-      const result = await withRetry(async () => {
-        return await pool.query(query, queryParams);
-      });
+        const row = result.rows[0] as NOTAM & { inserted: boolean }
 
-      // Track duplicate (upsert) vs insert
-      if (!result.rows[0].inserted) {
-        notamDuplicatesTotal.inc();
+        // Track duplicate (upsert) vs insert
+        if (!row.inserted) {
+          notamDuplicatesTotal.inc()
+        }
+
+        logger.info({ notam_id: notam.notam_id }, 'NOTAM created/updated')
+        return row
+      } catch (error) {
+        logger.error({ error, notam_id: notam.notam_id }, 'Failed to create/update NOTAM')
+        throw error
       }
-
-      logger.info({ notam_id: notam.notam_id }, 'NOTAM created/updated');
-      return result.rows[0];
-    } catch (error) {
-      success = 'false';
-      logger.error({ error, notam_id: notam.notam_id }, 'Failed to create/update NOTAM');
-      throw error;
-    } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      dbQueryDuration.observe({ operation: 'upsert', success }, duration);
-    }
+    })
   }
 
   async findById(notam_id: string): Promise<NOTAM | null> {
-    const query = 'SELECT * FROM notams WHERE notam_id = $1';
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
+    const query = 'SELECT * FROM notams WHERE notam_id = $1'
 
-    try {
-      const result = await pool.query(query, [notam_id]);
-      return result.rows[0] || null;
-    } catch (error) {
-      success = 'false';
-      logger.error({ error, notam_id }, 'Failed to find NOTAM by ID');
-      throw error;
-    } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      dbQueryDuration.observe({ operation: 'select', success }, duration);
-    }
+    return withQueryMetrics('select', async () => {
+      try {
+        const result = await pool.query(query, [notam_id])
+        return (result.rows[0] as NOTAM | undefined) ?? null
+      } catch (error) {
+        logger.error({ error, notam_id }, 'Failed to find NOTAM by ID')
+        throw error
+      }
+    })
   }
 
   async findByFilters(filters: NOTAMQueryFilters): Promise<NOTAM[]> {
-    const conditions: string[] = [];
-    const values: (string | Date | number)[] = [];
-    let paramIndex = 1;
-
-    if (filters.location) {
-      conditions.push(`icao_location = $${paramIndex++}`);
-      values.push(filters.location);
-    }
-
-    if (filters.start) {
-      conditions.push(`(effective_end IS NULL OR effective_end >= $${paramIndex++})`);
-      values.push(filters.start);
-    }
-
-    if (filters.end) {
-      conditions.push(`effective_start <= $${paramIndex++}`);
-      values.push(filters.end);
-    }
-
-    if (filters.purpose) {
-      conditions.push(`purpose = $${paramIndex++}`);
-      values.push(filters.purpose);
-    }
-
-    if (filters.scope) {
-      conditions.push(`scope = $${paramIndex++}`);
-      values.push(filters.scope);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limit = filters.limit || 100;
-    const offset = filters.offset || 0;
+    const where = buildWhereClause(filters)
+    const limit = filters.limit ?? 100
+    const offset = filters.offset ?? 0
 
     const query = `
       SELECT * FROM notams
-      ${whereClause}
+      ${where.clause}
       ORDER BY effective_start DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex}
-    `;
+      LIMIT $${where.nextParam} OFFSET $${where.nextParam + 1}
+    `
 
-    values.push(limit, offset);
+    const values = [...where.values, limit, offset]
 
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
-
-    try {
-      const result = await pool.query(query, values);
-      logger.debug({ count: result.rows.length, filters }, 'NOTAMs retrieved');
-      return result.rows;
-    } catch (error) {
-      success = 'false';
-      logger.error({ error, filters }, 'Failed to query NOTAMs');
-      throw error;
-    } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      dbQueryDuration.observe({ operation: 'select', success }, duration);
-    }
+    return withQueryMetrics('select', async () => {
+      try {
+        const result = await pool.query(query, values)
+        logger.debug({ count: result.rows.length, filters }, 'NOTAMs retrieved')
+        return result.rows as NOTAM[]
+      } catch (error) {
+        logger.error({ error, filters }, 'Failed to query NOTAMs')
+        throw error
+      }
+    })
   }
 
-  async deleteExpired(olderThanDays: number = 30): Promise<number> {
+  async deleteExpired(olderThanDays = 30): Promise<number> {
     const query = `
       DELETE FROM notams
       WHERE effective_end IS NOT NULL
         AND effective_end < NOW() - INTERVAL '1 day' * $1
-    `;
+    `
 
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
-
-    try {
-      const result = await pool.query(query, [olderThanDays]);
-      logger.info({ count: result.rowCount, olderThanDays }, 'Expired NOTAMs deleted');
-      return result.rowCount || 0;
-    } catch (error) {
-      success = 'false';
-      logger.error({ error }, 'Failed to delete expired NOTAMs');
-      throw error;
-    } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      dbQueryDuration.observe({ operation: 'delete', success }, duration);
-    }
+    return withQueryMetrics('delete', async () => {
+      try {
+        const result = await pool.query(query, [olderThanDays])
+        logger.info({ count: result.rowCount, olderThanDays }, 'Expired NOTAMs deleted')
+        return result.rowCount ?? 0
+      } catch (error) {
+        logger.error({ error }, 'Failed to delete expired NOTAMs')
+        throw error
+      }
+    })
   }
 
   async count(filters?: NOTAMQueryFilters): Promise<number> {
-    const conditions: string[] = [];
-    const values: (string | Date | number)[] = [];
-    let paramIndex = 1;
+    const where = buildWhereClause(filters)
+    const query = `SELECT COUNT(*) FROM notams ${where.clause}`
 
-    if (filters?.location) {
-      conditions.push(`icao_location = $${paramIndex++}`);
-      values.push(filters.location);
-    }
-
-    if (filters?.start) {
-      conditions.push(`(effective_end IS NULL OR effective_end >= $${paramIndex++})`);
-      values.push(filters.start);
-    }
-
-    if (filters?.end) {
-      conditions.push(`effective_start <= $${paramIndex}`);
-      values.push(filters.end);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const query = `SELECT COUNT(*) FROM notams ${whereClause}`;
-
-    const startTime = process.hrtime.bigint();
-    let success = 'true';
-
-    try {
-      const result = await pool.query(query, values);
-      return parseInt(result.rows[0].count, 10);
-    } catch (error) {
-      success = 'false';
-      logger.error({ error }, 'Failed to count NOTAMs');
-      throw error;
-    } finally {
-      const duration = Number(process.hrtime.bigint() - startTime) / 1e9;
-      dbQueryDuration.observe({ operation: 'count', success }, duration);
-    }
+    return withQueryMetrics('count', async () => {
+      try {
+        const result = await pool.query(query, where.values)
+        const row = result.rows[0] as { count: string }
+        return parseInt(row.count, 10)
+      } catch (error) {
+        logger.error({ error }, 'Failed to count NOTAMs')
+        throw error
+      }
+    })
   }
 }

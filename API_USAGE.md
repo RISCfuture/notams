@@ -42,6 +42,7 @@ Check the service health status.
 **Authentication:** None required
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -51,11 +52,13 @@ Check the service health status.
 ```
 
 **Example:**
+
 ```bash
 curl http://localhost:8080/health
 ```
 
 **Response Codes:**
+
 - `200` - Service is healthy
 - `503` - Service is unhealthy (database disconnected)
 
@@ -71,15 +74,15 @@ Retrieve NOTAMs with optional filtering and pagination.
 
 #### Query Parameters
 
-| Parameter | Type | Required | Description | Example |
-|-----------|------|----------|-------------|---------|
-| `location` | string | No | ICAO location code (4 characters) | `KJFK` |
-| `start` | ISO 8601 date | No | Filter NOTAMs effective on or after this date | `2025-01-15T00:00:00Z` |
-| `end` | ISO 8601 date | No | Filter NOTAMs effective on or before this date | `2025-01-20T23:59:59Z` |
-| `purpose` | string | No | NOTAM purpose code (single character) | `N`, `B`, `O`, `M`, `K` |
-| `scope` | string | No | NOTAM scope (single character) | `A`, `E`, `W` |
-| `limit` | integer | No | Number of results per page (max: 100) | `50` |
-| `offset` | integer | No | Number of results to skip for pagination | `0` |
+| Parameter  | Type          | Required | Description                                    | Example                 |
+| ---------- | ------------- | -------- | ---------------------------------------------- | ----------------------- |
+| `location` | string        | No       | ICAO location code (4 characters)              | `KJFK`                  |
+| `start`    | ISO 8601 date | No       | Filter NOTAMs effective on or after this date  | `2025-01-15T00:00:00Z`  |
+| `end`      | ISO 8601 date | No       | Filter NOTAMs effective on or before this date | `2025-01-20T23:59:59Z`  |
+| `purpose`  | string        | No       | NOTAM purpose code (single character)          | `N`, `B`, `O`, `M`, `K` |
+| `scope`    | string        | No       | NOTAM scope (single character)                 | `A`, `E`, `W`           |
+| `limit`    | integer       | No       | Number of results per page (max: 100)          | `50`                    |
+| `offset`   | integer       | No       | Number of results to skip for pagination       | `0`                     |
 
 #### Response Format
 
@@ -119,21 +122,21 @@ Retrieve NOTAMs with optional filtering and pagination.
 
 #### Field Descriptions
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | integer | Database primary key |
-| `notam_id` | string | Official NOTAM identifier (e.g., "FDC 2/1234") |
-| `icao_location` | string | ICAO airport/location code |
-| `effective_start` | ISO 8601 | When the NOTAM becomes effective (UTC) |
-| `effective_end` | ISO 8601 or null | When the NOTAM expires (null for permanent NOTAMs) |
-| `schedule` | string or null | D-field: Daily schedule if applicable (e.g., "0800-1800") |
-| `notam_text` | string | E-field: Human-readable NOTAM description |
-| `q_line` | object or null | Structured Q-line data (may be null for text NOTAMs) |
-| `purpose` | string or null | NOTAM purpose code |
-| `scope` | string or null | NOTAM scope code |
-| `traffic_type` | string or null | Traffic type code |
-| `created_at` | ISO 8601 | When the record was created in the database |
-| `updated_at` | ISO 8601 | When the record was last updated |
+| Field             | Type             | Description                                               |
+| ----------------- | ---------------- | --------------------------------------------------------- |
+| `id`              | integer          | Database primary key                                      |
+| `notam_id`        | string           | Official NOTAM identifier (e.g., "FDC 2/1234")            |
+| `icao_location`   | string           | ICAO airport/location code                                |
+| `effective_start` | ISO 8601         | When the NOTAM becomes effective (UTC)                    |
+| `effective_end`   | ISO 8601 or null | When the NOTAM expires (null for permanent NOTAMs)        |
+| `schedule`        | string or null   | D-field: Daily schedule if applicable (e.g., "0800-1800") |
+| `notam_text`      | string           | E-field: Human-readable NOTAM description                 |
+| `q_line`          | object or null   | Structured Q-line data (may be null for text NOTAMs)      |
+| `purpose`         | string or null   | NOTAM purpose code                                        |
+| `scope`           | string or null   | NOTAM scope code                                          |
+| `traffic_type`    | string or null   | Traffic type code                                         |
+| `created_at`      | ISO 8601         | When the record was created in the database               |
+| `updated_at`      | ISO 8601         | When the record was last updated                          |
 
 #### Purpose Codes
 
@@ -152,36 +155,42 @@ Retrieve NOTAMs with optional filtering and pagination.
 #### Examples
 
 **Get all NOTAMs for JFK airport:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?location=KJFK"
 ```
 
 **Get NOTAMs effective during a specific time range:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?start=2025-01-15T00:00:00Z&end=2025-01-20T23:59:59Z"
 ```
 
 **Get NOTAMs for JFK effective in January 2025:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?location=KJFK&start=2025-01-01T00:00:00Z&end=2025-01-31T23:59:59Z"
 ```
 
 **Get only aerodrome NOTAMs with immediate attention:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?purpose=N&scope=A"
 ```
 
 **Pagination - get second page of 50 results:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?limit=50&offset=50"
 ```
 
 **Response Codes:**
+
 - `200` - Success
 - `400` - Invalid query parameters (e.g., malformed date)
 - `401` - Missing or invalid authentication token
@@ -198,9 +207,9 @@ Retrieve a specific NOTAM by its ID.
 
 #### Path Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `notam_id` | string | Yes | The NOTAM identifier (URL-encoded) |
+| Parameter  | Type   | Required | Description                        |
+| ---------- | ------ | -------- | ---------------------------------- |
+| `notam_id` | string | Yes      | The NOTAM identifier (URL-encoded) |
 
 #### Response Format
 
@@ -234,27 +243,30 @@ Retrieve a specific NOTAM by its ID.
 #### Examples
 
 **Get a specific NOTAM (URL encoding required for spaces/slashes):**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams/FDC%202%2F1234"
 ```
 
 **Using JavaScript to encode the ID:**
+
 ```javascript
-const notamId = 'FDC 2/1234';
-const encodedId = encodeURIComponent(notamId);
-const url = `http://localhost:8080/api/notams/${encodedId}`;
+const notamId = 'FDC 2/1234'
+const encodedId = encodeURIComponent(notamId)
+const url = `http://localhost:8080/api/notams/${encodedId}`
 
 fetch(url, {
   headers: {
-    'Authorization': 'Bearer dev-token-12345'
-  }
+    Authorization: 'Bearer dev-token-12345',
+  },
 })
-  .then(res => res.json())
-  .then(data => console.log(data));
+  .then((res) => res.json())
+  .then((data) => console.log(data))
 ```
 
 **Response Codes:**
+
 - `200` - NOTAM found
 - `401` - Missing or invalid authentication token
 - `404` - NOTAM not found
@@ -276,13 +288,13 @@ All endpoints return consistent error responses:
 
 ### Common Error Codes
 
-| Status Code | Error Code | Description |
-|-------------|------------|-------------|
-| `400` | `INVALID_PARAMETERS` | Query parameters are invalid or malformed |
-| `401` | `UNAUTHORIZED` | Missing or invalid authentication token |
-| `404` | `NOT_FOUND` | Resource not found |
-| `500` | `INTERNAL_ERROR` | Server error (logged to Sentry) |
-| `503` | `SERVICE_UNAVAILABLE` | Service is unhealthy (database down) |
+| Status Code | Error Code            | Description                               |
+| ----------- | --------------------- | ----------------------------------------- |
+| `400`       | `INVALID_PARAMETERS`  | Query parameters are invalid or malformed |
+| `401`       | `UNAUTHORIZED`        | Missing or invalid authentication token   |
+| `404`       | `NOT_FOUND`           | Resource not found                        |
+| `500`       | `INTERNAL_ERROR`      | Server error (logged to Sentry)           |
+| `503`       | `SERVICE_UNAVAILABLE` | Service is unhealthy (database down)      |
 
 ### Example Error Response
 
@@ -292,6 +304,7 @@ curl -H "Authorization: Bearer invalid-token" \
 ```
 
 Response:
+
 ```json
 {
   "error": {
@@ -320,12 +333,14 @@ Cross-Origin Resource Sharing (CORS) is not currently enabled. If you need CORS 
 ### cURL
 
 **Basic query:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?location=KJFK&limit=10"
 ```
 
 **Pretty-print JSON response:**
+
 ```bash
 curl -H "Authorization: Bearer dev-token-12345" \
   "http://localhost:8080/api/notams?location=KJFK" | jq
@@ -334,33 +349,33 @@ curl -H "Authorization: Bearer dev-token-12345" \
 ### JavaScript (Fetch API)
 
 ```javascript
-const API_BASE = 'http://localhost:8080';
-const API_TOKEN = 'dev-token-12345';
+const API_BASE = 'http://localhost:8080'
+const API_TOKEN = 'dev-token-12345'
 
 async function getNotams(filters = {}) {
-  const params = new URLSearchParams(filters);
-  const url = `${API_BASE}/api/notams?${params}`;
+  const params = new URLSearchParams(filters)
+  const url = `${API_BASE}/api/notams?${params}`
 
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`
-    }
-  });
+      Authorization: `Bearer ${API_TOKEN}`,
+    },
+  })
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
   }
 
-  return response.json();
+  return response.json()
 }
 
 // Usage
 getNotams({ location: 'KJFK', limit: 10 })
-  .then(result => {
-    console.log(`Found ${result.pagination.total} NOTAMs`);
-    console.log(result.data);
+  .then((result) => {
+    console.log(`Found ${result.pagination.total} NOTAMs`)
+    console.log(result.data)
   })
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
 ```
 
 ### Python (requests)

@@ -1,91 +1,91 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import dotenv from 'dotenv'
+dotenv.config()
 
-import * as Sentry from '@sentry/node';
-import { createServer } from './server';
-import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database';
-import { logger } from './config/logger';
-import { NOTAMIngestionService } from './services/notam-ingestion';
+import * as Sentry from '@sentry/node'
+import { createServer } from './server'
+import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database'
+import { logger } from './config/logger'
+import { NOTAMIngestionService } from './services/notam-ingestion'
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
+const PORT = parseInt(process.env.PORT ?? '8080', 10)
 
 // Global error handlers to prevent crashes from unhandled errors
 process.on('uncaughtException', (error: Error) => {
-  logger.error({ error }, 'Uncaught exception - process will continue');
-  Sentry.captureException(error);
-});
+  logger.error({ error }, 'Uncaught exception - process will continue')
+  Sentry.captureException(error)
+})
 
 process.on('unhandledRejection', (reason: unknown) => {
-  logger.error({ reason }, 'Unhandled promise rejection');
-  Sentry.captureException(reason);
-});
+  logger.error({ reason }, 'Unhandled promise rejection')
+  Sentry.captureException(reason)
+})
 
-let ingestionService: NOTAMIngestionService | null = null;
+let ingestionService: NOTAMIngestionService | null = null
 
 async function main() {
   try {
-    logger.info('Starting NOTAM service');
+    logger.info('Starting NOTAM service')
 
     // Test database connection
-    const dbConnected = await testConnection();
+    const dbConnected = await testConnection()
     if (!dbConnected) {
-      logger.error('Failed to connect to database, exiting');
-      process.exit(1);
+      logger.error('Failed to connect to database, exiting')
+      process.exit(1)
     }
 
     // Start database health monitoring
-    startHealthCheck();
-    logger.info('Database health monitoring started');
+    startHealthCheck()
+    logger.info('Database health monitoring started')
 
     // Create and start Express server
-    const app = createServer();
+    const app = createServer()
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info({ port: PORT }, 'HTTP server listening');
-    });
+      logger.info({ port: PORT }, 'HTTP server listening')
+    })
 
     // Start JMS ingestion service (only if credentials are configured)
     if (process.env.JMS_USERNAME && process.env.JMS_PASSWORD) {
       try {
-        ingestionService = new NOTAMIngestionService();
-        await ingestionService.start();
-        logger.info('JMS ingestion service started');
+        ingestionService = new NOTAMIngestionService()
+        ingestionService.start()
+        logger.info('JMS ingestion service started')
       } catch (error) {
-        logger.error({ error }, 'Failed to start JMS ingestion service, continuing with API only');
+        logger.error({ error }, 'Failed to start JMS ingestion service, continuing with API only')
       }
     } else {
-      logger.warn('JMS credentials not configured, ingestion service not started');
+      logger.warn('JMS credentials not configured, ingestion service not started')
     }
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {
-      logger.info({ signal }, 'Received shutdown signal');
+      logger.info({ signal }, 'Received shutdown signal')
 
       // Stop accepting new requests
       server.close(() => {
-        logger.info('HTTP server closed');
-      });
+        logger.info('HTTP server closed')
+      })
 
       // Stop ingestion service
       if (ingestionService) {
-        await ingestionService.stop();
+        ingestionService.stop()
       }
 
       // Stop health monitoring
-      stopHealthCheck();
+      stopHealthCheck()
 
       // Close database pool
-      await closePool();
+      await closePool()
 
-      logger.info('Graceful shutdown complete');
-      process.exit(0);
-    };
+      logger.info('Graceful shutdown complete')
+      process.exit(0)
+    }
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => void shutdown('SIGTERM'))
+    process.on('SIGINT', () => void shutdown('SIGINT'))
   } catch (error) {
-    logger.error({ error }, 'Failed to start service');
-    process.exit(1);
+    logger.error({ error }, 'Failed to start service')
+    process.exit(1)
   }
 }
 
-main();
+void main()
