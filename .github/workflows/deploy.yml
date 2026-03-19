@@ -20,15 +20,15 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
       - name: Create Sentry release
-        uses: getsentry/action-release@v1
+        uses: getsentry/action-release@v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: timcodes
