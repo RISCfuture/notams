@@ -11,10 +11,10 @@ describe('Authentication Middleware', () => {
       headers: {},
     }
     mockResponse = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     }
-    nextFunction = jest.fn()
+    nextFunction = vi.fn()
   })
 
   it('should reject request without authorization header', async () => {

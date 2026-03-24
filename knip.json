@@ -3,8 +3,8 @@
   "entry": ["src/index.ts", "src/scripts/*.ts"],
   "project": ["src/**/*.ts"],
   "ignoreDependencies": ["pino-pretty", "ts-node", "jiti"],
-  "jest": {
+  "vitest": {
     "entry": ["tests/**/*.test.ts"],
-    "config": ["jest.config.js"]
+    "config": ["vitest.config.ts"]
   }
 }

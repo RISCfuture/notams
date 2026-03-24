@@ -177,7 +177,7 @@ describe('Circuit Breaker Utility', () => {
 
   describe('execute', () => {
     it('should execute operation when circuit is closed', async () => {
-      const operation = jest.fn(async () => 'success')
+      const operation = vi.fn(async () => 'success')
       const result = await breaker.execute(operation)
 
       expect(result).toBe('success')
@@ -191,7 +191,7 @@ describe('Circuit Breaker Utility', () => {
       breaker.recordFailure(error)
       breaker.recordFailure(error)
 
-      const operation = jest.fn(async () => 'success')
+      const operation = vi.fn(async () => 'success')
 
       await expect(breaker.execute(operation)).rejects.toThrow('Circuit breaker is open')
       expect(operation).not.toHaveBeenCalled()
@@ -202,14 +202,14 @@ describe('Circuit Breaker Utility', () => {
       breaker.recordFailure(error)
       expect(breaker.getState().failures).toBe(1)
 
-      const operation = jest.fn(async () => 'success')
+      const operation = vi.fn(async () => 'success')
       await breaker.execute(operation)
 
       expect(breaker.getState().failures).toBe(0)
     })
 
     it('should record failure automatically', async () => {
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         throw new Error('ETIMEDOUT')
       })
 

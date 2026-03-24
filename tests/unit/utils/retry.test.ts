@@ -47,7 +47,7 @@ describe('Retry Utility', () => {
   describe('withRetry', () => {
     it('should succeed on first attempt when operation succeeds', async () => {
       let callCount = 0
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         callCount++
         return 'success'
       })
@@ -59,7 +59,7 @@ describe('Retry Utility', () => {
 
     it('should retry on retriable errors', async () => {
       let callCount = 0
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         callCount++
         if (callCount <= 2) {
           throw new Error('Connection terminated unexpectedly')
@@ -73,7 +73,7 @@ describe('Retry Utility', () => {
     })
 
     it('should throw after max retries exceeded', async () => {
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         throw new Error('Connection terminated unexpectedly')
       })
 
@@ -84,7 +84,7 @@ describe('Retry Utility', () => {
     })
 
     it('should not retry on non-retriable errors', async () => {
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         throw new Error('syntax error')
       })
 
@@ -94,7 +94,7 @@ describe('Retry Utility', () => {
 
     it('should respect custom isRetriable function', async () => {
       let callCount = 0
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         callCount++
         if (callCount <= 1) {
           throw new Error('Custom Error')
@@ -117,7 +117,7 @@ describe('Retry Utility', () => {
 
     it('should use environment variable for maxRetries', async () => {
       process.env.DB_MAX_RETRIES = '2'
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         throw new Error('ECONNRESET')
       })
 
@@ -130,7 +130,7 @@ describe('Retry Utility', () => {
     it('should use environment variable for backoff base', async () => {
       process.env.DB_RETRY_BACKOFF_BASE = '100'
       let callCount = 0
-      const operation = jest.fn(async () => {
+      const operation = vi.fn(async () => {
         callCount++
         if (callCount <= 1) {
           throw new Error('ETIMEDOUT')

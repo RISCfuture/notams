@@ -4,12 +4,12 @@
   "description": "FAA SWIM NOTAM ingestion and API service",
   "main": "dist/index.js",
   "scripts": {
-    "build": "yarn node scripts/pnp-run.cjs typescript/bin/tsc -p tsconfig.app.json",
+    "build": "tsc -p tsconfig.app.json",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "test": "NODE_ENV=test yarn node scripts/pnp-run.cjs jest/bin/jest --runInBand",
-    "test:watch": "NODE_ENV=test yarn node scripts/pnp-run.cjs jest/bin/jest --watch",
-    "test:coverage": "NODE_ENV=test yarn node scripts/pnp-run.cjs jest/bin/jest --coverage",
+    "test": "NODE_ENV=test vitest run",
+    "test:watch": "NODE_ENV=test vitest",
+    "test:coverage": "NODE_ENV=test vitest run --coverage",
     "migrate": "node dist/scripts/migrate.js",
     "prune": "node dist/scripts/prune-notams.js",
     "lint": "yarn lint:eslint && yarn lint:oxlint",
@@ -19,7 +19,7 @@
     "lint:fix": "yarn node scripts/lint.cjs --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "yarn node scripts/pnp-run.cjs typescript/bin/tsc -p tsconfig.app.json --noEmit"
+    "type-check": "tsc -p tsconfig.app.json --noEmit"
   },
   "keywords": [
     "notam",
@@ -44,24 +44,22 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.20.0",
     "@types/stompit": "^0.26.6",
     "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
-    "jest": "^30.3.0",
-    "jest-util": "^30.3.0",
     "jiti": "^2.6.1",
     "knip": "^6.0.5",
     "oxlint": "^1.57.0",
     "prettier": "^3.8.1",
     "supertest": "^7.2.2",
-    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.2"
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^4.1.1"
   },
   "engines": {
     "node": ">=25.0.0"
