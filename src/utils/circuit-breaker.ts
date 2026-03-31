@@ -2,13 +2,13 @@ import * as Sentry from '@sentry/node'
 import { logger } from '../config/logger'
 import { matchesConnectionError } from './retry'
 
-export interface CircuitBreakerOptions {
+interface CircuitBreakerOptions {
   threshold?: number
   timeout?: number
   isConnectionError?: (error: unknown) => boolean
 }
 
-export interface CircuitBreakerState {
+interface CircuitBreakerState {
   failures: number
   lastFailure: Date | null
   isOpen: boolean

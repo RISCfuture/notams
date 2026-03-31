@@ -1,4 +1,4 @@
-export interface SolaceConfig {
+interface SolaceConfig {
   url: string
   vpnName: string
   username: string

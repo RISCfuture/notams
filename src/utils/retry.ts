@@ -1,6 +1,6 @@
 import { logger } from '../config/logger'
 
-export interface RetryOptions {
+interface RetryOptions {
   maxRetries?: number
   backoffBase?: number
   maxBackoff?: number
@@ -8,7 +8,7 @@ export interface RetryOptions {
 }
 
 /** Connection error message substrings shared by retry and circuit breaker logic */
-export const CONNECTION_ERROR_MESSAGES = [
+const CONNECTION_ERROR_MESSAGES = [
   'Connection terminated unexpectedly',
   'connection timeout',
   'ECONNRESET',
