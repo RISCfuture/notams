@@ -5,8 +5,8 @@ FROM node:25.6-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock ./
+# Copy package files and Yarn config
+COPY package.json yarn.lock .yarnrc.yml ./
 
 # Install and enable corepack to manage Yarn via packageManager field
 RUN npm install -g --force corepack
@@ -29,8 +29,8 @@ FROM node:25.6-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock ./
+# Copy package files and Yarn config
+COPY package.json yarn.lock .yarnrc.yml ./
 
 # Install and enable corepack to manage Yarn via packageManager field
 RUN npm install -g --force corepack
