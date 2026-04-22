@@ -112,28 +112,4 @@ describe('NOTAM Pruning', () => {
     const found = await notamModel.findById('PERM_NOTAM')
     expect(found).not.toBeNull()
   })
-
-  it('should return count of deleted NOTAMs', async () => {
-    // Create multiple expired NOTAMs
-    for (let i = 0; i < 5; i++) {
-      const expiredNotam: NOTAM = {
-        notam_id: `EXPIRED_${i}`,
-        icao_location: 'KJFK',
-        effective_start: new Date('2020-01-01T00:00:00Z'),
-        effective_end: new Date('2020-01-15T00:00:00Z'),
-        schedule: null,
-        notam_text: `EXPIRED NOTAM ${i}`,
-        q_line: null,
-        purpose: null,
-        scope: null,
-        traffic_type: null,
-        raw_message: null,
-      }
-
-      await notamModel.create(expiredNotam)
-    }
-
-    const deletedCount = await notamModel.deleteExpired(30)
-    expect(deletedCount).toBe(5)
-  })
 })

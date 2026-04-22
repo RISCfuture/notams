@@ -4,16 +4,16 @@
 
 A production-ready TypeScript Express.js service that:
 
-- **Ingests** NOTAMs from FAA SWIM via JMS (Java Messaging Service)
+- **Ingests** NOTAMs from the FAA NMS (NOTAM Management System) REST API
 - **Stores** them in PostgreSQL with efficient indexing
 - **Serves** them via a RESTful HTTP JSON API with bearer token authentication
 - **Prunes** expired NOTAMs on a schedule
 
 ## Key Features
 
-✅ **Always-On Service**: Designed for Fly.io with no auto-stop for continuous JMS ingestion
+✅ **Always-On Service**: Designed for Fly.io with no auto-stop for continuous NMS polling
 ✅ **Type-Safe**: Full TypeScript with strict mode enabled
-✅ **Well-Tested**: Comprehensive unit and integration tests (Jest + Supertest)
+✅ **Well-Tested**: Comprehensive unit and integration tests (Vitest + Supertest)
 ✅ **Production-Ready**: Error tracking (Sentry), structured logging (Pino), health checks
 ✅ **Small & Efficient**: Multi-stage Docker build, optimized for small memory footprint
 ✅ **Code Quality**: ESLint + Prettier configured and working
@@ -22,17 +22,17 @@ A production-ready TypeScript Express.js service that:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    FAA SWIM (JMS)                       │
-│              Solace Protocol - Port 55443               │
+│                   FAA NMS (REST API)                    │
+│           HTTPS + OAuth2 client_credentials             │
 └────────────────────────┬────────────────────────────────┘
                          │
                          │ Credentials from 1Password
-                         │ ("FAA SWIFT" item)
+                         │ ("FAA NMS API" item)
                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│              JMS Ingestion Service                      │
-│  - solclientjs (Solace) with auto-reconnect             │
-│  - Parses AIXM XML and text NOTAMs                      │
+│              NMS Ingestion Service                      │
+│  - HTTP polling via native fetch                        │
+│  - Parses GeoJSON NOTAMs                                │
 │  - Upserts to PostgreSQL                                │
 └────────────────────────┬────────────────────────────────┘
                          │
@@ -71,15 +71,14 @@ Scheduled Job:
 | Layer              | Technology         | Purpose                     |
 | ------------------ | ------------------ | --------------------------- |
 | **Language**       | TypeScript 5.3     | Type safety, better DX      |
-| **Runtime**        | Node.js 22         | JavaScript runtime          |
+| **Runtime**        | Node.js 24         | JavaScript runtime          |
 | **Framework**      | Express.js 4       | HTTP server                 |
 | **Database**       | PostgreSQL 17      | Relational data storage     |
-| **JMS Client**     | solclientjs        | Solace messaging client     |
-| **XML Parser**     | fast-xml-parser    | Parse AIXM messages         |
+| **HTTP Client**    | Native fetch       | NMS REST API polling        |
 | **Validation**     | zod                | Runtime type validation     |
 | **Logging**        | pino + pino-pretty | Structured JSON logs        |
 | **Error Tracking** | Sentry             | Production error monitoring |
-| **Testing**        | Jest + Supertest   | Unit & integration tests    |
+| **Testing**        | Vitest + Supertest | Unit & integration tests    |
 | **Code Quality**   | ESLint + Prettier  | Linting and formatting      |
 | **Deployment**     | Fly.io + Docker    | Container orchestration     |
 
@@ -90,7 +89,7 @@ notams/
 ├── src/
 │   ├── config/           # Configuration modules
 │   │   ├── database.ts   # PostgreSQL connection pool
-│   │   ├── jms.ts        # JMS/STOMP configuration
+│   │   ├── nms.ts        # NMS API configuration
 │   │   └── logger.ts     # Pino logger setup
 │   │
 │   ├── middleware/       # Express middleware
@@ -105,8 +104,8 @@ notams/
 │   │   └── notams.ts     # NOTAM query endpoints
 │   │
 │   ├── services/         # Business logic
-│   │   ├── notam-ingestion.ts  # JMS consumer service
-│   │   └── notam-parser.ts     # AIXM/text parser
+│   │   ├── notam-ingestion.ts  # NMS API polling service
+│   │   └── notam-parser.ts     # GeoJSON NOTAM parser
 │   │
 │   ├── scripts/          # Standalone scripts
 │   │   ├── migrate.ts    # Database migrations
@@ -118,10 +117,10 @@ notams/
 ├── tests/
 │   ├── fixtures/         # Test data
 │   │   ├── sample-notams.json
-│   │   └── jms-messages.xml
+│   │   └── nms-geojson-response.json
 │   │
 │   ├── integration/      # Integration tests
-│   │   ├── jms-ingestion.test.ts
+│   │   ├── nms-ingestion.test.ts
 │   │   ├── notam-api.test.ts
 │   │   └── prune-notams.test.ts
 │   │
@@ -140,10 +139,10 @@ notams/
 ├── fly.toml              # Fly.io deployment config
 ├── package.json          # Dependencies & scripts
 ├── tsconfig.json         # TypeScript config
-├── jest.config.js        # Jest test config
+├── vitest.config.ts      # Vitest test config
 ├── .eslintrc.json        # ESLint rules
 ├── .prettierrc.json      # Prettier formatting
-├── .nvmrc                # Node version (22)
+├── .nvmrc                # Node version (24)
 ├── .env.example          # Environment template
 ├── README.md             # Full documentation
 ├── SETUP.md              # Detailed setup guide
@@ -167,7 +166,7 @@ notams/
 - purpose (VARCHAR)          -- N, B, O, M, K
 - scope (VARCHAR)            -- A, E, W
 - traffic_type (VARCHAR)     -- I, V, etc.
-- raw_message (TEXT)         -- Original AIXM/XML
+- raw_message (TEXT)         -- Original GeoJSON
 - created_at (TIMESTAMPTZ)
 - updated_at (TIMESTAMPTZ)
 
@@ -197,7 +196,7 @@ See [API_USAGE.md](./API_USAGE.md) for comprehensive API documentation including
 
 ## Environment Variables
 
-See [SETUP.md](./SETUP.md#step-3-environment-configuration) for detailed environment configuration including how to get JMS credentials from 1Password.
+See [SETUP.md](./SETUP.md#step-3-environment-configuration) for detailed environment configuration including how to get NMS credentials from 1Password.
 
 ## Yarn Scripts
 
@@ -216,15 +215,15 @@ See [README.md](./README.md#scripts) for the complete list of available yarn scr
 ## Testing Strategy
 
 - **Unit Tests**: Pure functions (parser, utilities)
-- **Integration Tests**: API endpoints, database operations, JMS processing
+- **Integration Tests**: API endpoints, database operations, NMS ingestion
 - **Test Database**: Isolated `notams_test` database
-- **Mock Data**: Sample AIXM XML and JSON fixtures
+- **Mock Data**: Sample GeoJSON and JSON fixtures
 - **Coverage Target**: >80%
 
 ## Security Considerations
 
 - ✅ Bearer tokens stored in database (not hardcoded)
-- ✅ JMS credentials from 1Password, stored as env vars
+- ✅ NMS credentials from 1Password, stored as env vars
 - ✅ Database connection pooling with timeouts
 - ✅ Input validation with zod
 - ✅ SQL injection protection (parameterized queries)
@@ -236,9 +235,9 @@ See [README.md](./README.md#scripts) for the complete list of available yarn scr
 - ✅ Database indexes on common query fields
 - ✅ Connection pooling for PostgreSQL
 - ✅ Multi-stage Docker build (smaller image)
-- ✅ Efficient AIXM XML parsing
+- ✅ Efficient GeoJSON parsing
 - ✅ Upsert logic (ON CONFLICT) for duplicate NOTAMs
-- ✅ Auto-reconnect for JMS with exponential backoff
+- ✅ Resilient polling with exponential backoff on errors
 
 ## Deployment Checklist
 
@@ -248,7 +247,7 @@ See [README.md](./README.md#deployment-to-flyio) for complete deployment instruc
 
 - **Setup Instructions**: See [SETUP.md](./SETUP.md)
 - **Full Documentation**: See [README.md](./README.md)
-- **FAA SWIM Docs**: https://www.faa.gov/air_traffic/technology/swim
+- **FAA NMS Support**: 7-AWA-NAIMES@faa.gov or 866-466-1336
 - **NOTAM Format**: See ICAO Annex 15
 
 ## License

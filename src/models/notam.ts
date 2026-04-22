@@ -97,7 +97,133 @@ async function withQueryMetrics<T>(operation: string, fn: () => Promise<T>): Pro
   }
 }
 
+const BATCH_CHUNK_SIZE = 500
+const PARAMS_PER_NOTAM = 11
+
 export class NOTAMModel {
+  async createBatch(notams: NOTAM[]): Promise<{ inserted: number; updated: number }> {
+    if (notams.length === 0) {
+      return { inserted: 0, updated: 0 }
+    }
+
+    let totalInserted = 0
+    let totalUpdated = 0
+
+    // Process in chunks to stay under PostgreSQL's 65535 parameter limit
+    for (let i = 0; i < notams.length; i += BATCH_CHUNK_SIZE) {
+      // Dedupe within the chunk on notam_id. Postgres' ON CONFLICT DO UPDATE
+      // rejects the whole batch (21000 CARDINALITY_VIOLATION, ExecOnConflictUpdate)
+      // when a single command proposes two rows with the same conflict key —
+      // which happens on the initial load because unparseable NOTAMs all collapse
+      // to notam_id='UNKNOWN', and the same AIXM NOTAM can appear multiple times
+      // across revisions. Last occurrence wins so later revisions supersede earlier ones.
+      const rawChunk = notams.slice(i, i + BATCH_CHUNK_SIZE)
+      const deduped = new Map<string, NOTAM>()
+      for (const notam of rawChunk) deduped.set(notam.notam_id, notam)
+      const chunk = Array.from(deduped.values())
+      const chunkIndex = Math.floor(i / BATCH_CHUNK_SIZE) + 1
+      const totalChunks = Math.ceil(notams.length / BATCH_CHUNK_SIZE)
+
+      const { inserted, updated } = await withQueryMetrics('upsert_batch', async () => {
+        try {
+          const valueTuples: string[] = []
+          const queryParams: unknown[] = []
+
+          for (let j = 0; j < chunk.length; j++) {
+            const notam = chunk[j]
+            const offset = j * PARAMS_PER_NOTAM
+            const indices = Array.from({ length: PARAMS_PER_NOTAM }, (_, k) => `$${offset + k + 1}`)
+            valueTuples.push(`(${indices.join(', ')})`)
+
+            queryParams.push(
+              notam.notam_id,
+              notam.icao_location,
+              notam.effective_start,
+              notam.effective_end,
+              notam.schedule,
+              notam.notam_text,
+              notam.q_line ? JSON.stringify(notam.q_line) : null,
+              notam.purpose,
+              notam.scope,
+              notam.traffic_type,
+              notam.raw_message,
+            )
+          }
+
+          const query = `
+            WITH upserted AS (
+              INSERT INTO notams (
+                notam_id, icao_location, effective_start, effective_end,
+                schedule, notam_text, q_line, purpose, scope, traffic_type, raw_message
+              )
+              VALUES ${valueTuples.join(', ')}
+              ON CONFLICT (notam_id)
+              DO UPDATE SET
+                icao_location = EXCLUDED.icao_location,
+                effective_start = EXCLUDED.effective_start,
+                effective_end = EXCLUDED.effective_end,
+                schedule = EXCLUDED.schedule,
+                notam_text = EXCLUDED.notam_text,
+                q_line = EXCLUDED.q_line,
+                purpose = EXCLUDED.purpose,
+                scope = EXCLUDED.scope,
+                traffic_type = EXCLUDED.traffic_type,
+                raw_message = EXCLUDED.raw_message,
+                updated_at = NOW()
+              RETURNING (xmax = 0) AS is_new
+            )
+            SELECT
+              COUNT(*) FILTER (WHERE is_new) AS inserted,
+              COUNT(*) FILTER (WHERE NOT is_new) AS updated
+            FROM upserted
+          `
+
+          const result = await withRetry(async () => {
+            return await pool.query(query, queryParams)
+          })
+
+          const countsRow = result.rows[0] as {
+            inserted: string | number
+            updated: string | number
+          }
+          const chunkInserted = Number(countsRow.inserted)
+          const chunkUpdated = Number(countsRow.updated)
+
+          notamDuplicatesTotal.inc(chunkUpdated)
+
+          logger.info(
+            {
+              chunk: chunkIndex,
+              totalChunks,
+              chunkSize: chunk.length,
+              chunkInserted,
+              chunkUpdated,
+            },
+            'Batch upsert chunk completed',
+          )
+
+          return { inserted: chunkInserted, updated: chunkUpdated }
+        } catch (error) {
+          logger.error(
+            { error, chunk: chunkIndex, totalChunks, chunkSize: chunk.length },
+            'Failed to batch upsert NOTAMs',
+          )
+          throw error
+        }
+      })
+
+      totalInserted += inserted
+      totalUpdated += updated
+    }
+
+    logger.info(
+      { total: notams.length, inserted: totalInserted, updated: totalUpdated },
+      'Batch upsert completed',
+    )
+
+    return { inserted: totalInserted, updated: totalUpdated }
+  }
+
   async create(notam: NOTAM): Promise<NOTAM> {
     const query = `
       INSERT INTO notams (

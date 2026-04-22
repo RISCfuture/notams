@@ -132,31 +132,41 @@ export const circuitBreakerFailuresTotal = isProduction
     })
   : (noopCounter as unknown as Counter<'name' | 'error_type'>)
 
-// ============ JMS/SOLACE METRICS ============
+// ============ INGESTION METRICS ============
 
-export const jmsConnectionStatus = isProduction
+export const ingestionConnectionStatus = isProduction
   ? new Gauge({
-      name: 'jms_connection_status',
-      help: 'JMS connection status (1=connected, 0=disconnected)',
-      labelNames: ['broker'] as const,
+      name: 'ingestion_connection_status',
+      help: 'Ingestion source connection status (1=connected, 0=disconnected)',
+      labelNames: ['source'] as const,
       registers: [metricsRegistry],
     })
-  : (noopGauge as unknown as Gauge<'broker'>)
+  : (noopGauge as unknown as Gauge<'source'>)
 
-export const jmsMessagesReceivedTotal = isProduction
+export const ingestionMessagesReceivedTotal = isProduction
   ? new Counter({
-      name: 'jms_messages_received_total',
-      help: 'Total number of JMS messages received',
-      labelNames: ['queue'] as const,
+      name: 'ingestion_messages_received_total',
+      help: 'Total number of messages received from ingestion source',
+      labelNames: ['source'] as const,
       registers: [metricsRegistry],
     })
-  : (noopCounter as unknown as Counter<'queue'>)
+  : (noopCounter as unknown as Counter<'source'>)
 
-export const jmsReconnectAttemptsTotal = isProduction
+export const ingestionReconnectAttemptsTotal = isProduction
   ? new Counter({
-      name: 'jms_reconnect_attempts_total',
-      help: 'Total number of JMS reconnection attempts',
+      name: 'ingestion_reconnect_attempts_total',
+      help: 'Total number of ingestion reconnection attempts',
       labelNames: ['success'] as const,
       registers: [metricsRegistry],
     })
   : (noopCounter as unknown as Counter<'success'>)
+
+export const ingestionPollDuration = isProduction
+  ? new Histogram({
+      name: 'ingestion_poll_duration_seconds',
+      help: 'Duration of ingestion poll cycle in seconds',
+      labelNames: ['source'] as const,
+      buckets: [0.1, 0.5, 1, 2.5, 5, 10, 30, 60],
+      registers: [metricsRegistry],
+    })
+  : (noopHistogram as unknown as Histogram<'source'>)

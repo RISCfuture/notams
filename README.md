@@ -3,7 +3,7 @@
 ![CI](https://github.com/RISCfuture/notams/workflows/CI/badge.svg)
 ![Deploy](https://github.com/RISCfuture/notams/workflows/Deploy/badge.svg)
 
-A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the FAA SWIM (System Wide Information Management) service via Solace messaging broker and provides an HTTP JSON API for querying NOTAMs.
+A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the FAA NMS (NOTAM Management System) REST API and provides an HTTP JSON API for querying NOTAMs.
 
 ## Documentation
 
@@ -14,7 +14,7 @@ A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the
 
 ## Features
 
-- **Solace JMS Ingestion**: Continuously ingests NOTAMs from FAA SWIM via Solace messaging broker with TLS support
+- **NMS API Ingestion**: Polls the FAA NMS REST API for NOTAMs via OAuth2-authenticated HTTPS requests
 - **PostgreSQL Storage**: Stores NOTAMs with efficient indexing for fast queries
 - **HTTP JSON API**: RESTful API with bearer token authentication
 - **Automatic Pruning**: Scheduled job to remove expired NOTAMs
@@ -22,14 +22,14 @@ A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the
 - **Error Tracking**: Sentry integration for error monitoring
 - **Health Checks**: Endpoint for monitoring service health
 - **TypeScript**: Type-safe codebase with strict mode enabled
-- **Comprehensive Tests**: Unit and integration tests with Jest
+- **Comprehensive Tests**: Unit and integration tests with Vitest
 
 ## Architecture
 
 ```
 ┌─────────────────┐
-│   FAA SWIM      │
-│  (Solace JMS)   │
+│    FAA NMS      │
+│   (REST API)    │
 └────────┬────────┘
          │
          ▼
@@ -49,7 +49,7 @@ A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the
 
 For detailed local development setup, see **[SETUP.md](./SETUP.md)**.
 
-**Prerequisites:** Node.js 22+, PostgreSQL 17+, FAA SWIM credentials (from 1Password "FAA SWIFT" item)
+**Prerequisites:** Node.js 24+, PostgreSQL 17+, FAA NMS API credentials (from 1Password "FAA NMS API" item)
 
 ```bash
 # Quick setup
@@ -138,21 +138,20 @@ fly postgres attach notam-db
 
 ### 5. Set Secrets
 
-Get JMS credentials from 1Password:
+Get NMS credentials from 1Password:
 
 ```bash
-op item get "FAA SWIFT" --format json
+op item get "FAA NMS API" --format json
 ```
 
 Set secrets:
 
 ```bash
 fly secrets set \
-  JMS_HOST=swim.faa.gov \
-  JMS_PORT=61614 \
-  JMS_USERNAME=$(op read "op://Private/FAA SWIFT/username") \
-  JMS_PASSWORD=$(op read "op://Private/FAA SWIFT/password") \
-  JMS_DESTINATION=/topic/faa.notam.all \
+  NMS_BASE_URL=https://api-nms.aim.faa.gov \
+  NMS_CLIENT_ID=$(op read "op://Private/FAA NMS API/client_id") \
+  NMS_CLIENT_SECRET=$(op read "op://Private/FAA NMS API/client_secret") \
+  NMS_POLL_INTERVAL_MS=300000 \
   SENTRY_DSN=your_sentry_dsn
 ```
 
@@ -223,18 +222,18 @@ Check your `DATABASE_URL` is correct and PostgreSQL is running:
 psql $DATABASE_URL -c "SELECT NOW();"
 ```
 
-### JMS Connection Errors
+### NMS API Connection Errors
 
-Verify JMS credentials are correct:
+Verify NMS credentials are correct:
 
 ```bash
-op item get "FAA SWIFT"
+op item get "FAA NMS API"
 ```
 
-Check JMS host and port are accessible:
+Check NMS API endpoint is reachable:
 
 ```bash
-telnet swim.faa.gov 61614
+curl -s -o /dev/null -w "%{http_code}" https://api-nms.aim.faa.gov/nmsapi/v1/notams
 ```
 
 ### Test Failures

@@ -1,0 +1,105 @@
+{
+  "status": "Success",
+  "data": {
+    "geojson": [
+      {
+        "type": "Feature",
+        "properties": {
+          "coreNOTAMData": {
+            "notamEvent": {
+              "encoding": "ANNOTATION",
+              "scenario": "87"
+            },
+            "notam": {
+              "id": "NMS_ID_1757609538792382",
+              "series": "A",
+              "number": "08/430",
+              "year": "2025",
+              "type": "N",
+              "issued": "2025-08-21T02:34:00.000Z",
+              "affectedFir": "STL",
+              "selectionCode": "QMRLT",
+              "traffic": "IV",
+              "purpose": "BO",
+              "scope": "A",
+              "minimumFl": "000",
+              "maximumFl": "999",
+              "location": "8WC",
+              "effectiveStart": "2025-08-21T02:34:00.000Z",
+              "effectiveEnd": "2025-10-01T23:59:00.000Z",
+              "text": "RWY 20 RWY END ID LGT U/S",
+              "classification": "DOM",
+              "accountId": "STL",
+              "lastUpdated": "2025-08-21T02:34:00.000Z",
+              "icaoLocation": "K8WC",
+              "coordinates": "3792N09073W",
+              "radius": "5"
+            },
+            "notamTranslation": [
+              {
+                "type": "LOCAL_FORMAT",
+                "simpleText": "!STL 08/430 8WC RWY 20 RWY END ID LGT U/S 2508210234-2510012359"
+              }
+            ]
+          }
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-90.7314840277778, 37.92919525]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "coreNOTAMData": {
+            "notamEvent": {
+              "encoding": "ANNOTATION",
+              "scenario": "101"
+            },
+            "notam": {
+              "id": "NMS_ID_1757609468919567",
+              "series": "A",
+              "number": "04/221",
+              "year": "2025",
+              "type": "N",
+              "issued": "2025-04-30T22:28:00.000Z",
+              "affectedFir": "ZBW",
+              "selectionCode": "QXXXX",
+              "traffic": "IV",
+              "purpose": "BO",
+              "scope": "W",
+              "minimumFl": "000",
+              "maximumFl": "012",
+              "location": "ZBW",
+              "effectiveStart": "2025-05-01T11:00:00.000Z",
+              "effectiveEnd": "2025-11-02T00:01:00.000Z",
+              "schedule": "Daily:1100-0001~DLY 1100-0001",
+              "text": "AIRSPACE UAS WI AN AREA DEFINED AS 1.5NM RADIUS OF 430205N0753903W (12.2NM NW VGC) SFC-1200FT AGL DLY 1100-0001",
+              "classification": "DOM",
+              "accountId": "BDR",
+              "lastUpdated": "2025-04-30T22:28:00.000Z",
+              "icaoLocation": "KZBW",
+              "coordinates": "4302N07539W",
+              "radius": "2"
+            },
+            "notamTranslation": [
+              {
+                "type": "LOCAL_FORMAT",
+                "simpleText": "!BDR 04/221 ZBW AIRSPACE UAS WI AN AREA DEFINED AS 1.5NM RADIUS OF 430205N0753903W (12.2NM NW VGC) SFC-1200FT AGL DLY 1100-0001 2505011100-2511020001"
+              }
+            ]
+          }
+        },
+        "geometry": {
+          "type": "GeometryCollection",
+          "geometries": [
+            {
+              "type": "Point",
+              "coordinates": [-75.6508333333333, 43.0347222222222]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

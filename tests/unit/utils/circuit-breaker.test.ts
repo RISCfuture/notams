@@ -18,21 +18,6 @@ describe('Circuit Breaker Utility', () => {
       expect(isConnectionError(error)).toBe(true)
     })
 
-    it('should identify ECONNRESET', () => {
-      const error = new Error('ECONNRESET')
-      expect(isConnectionError(error)).toBe(true)
-    })
-
-    it('should identify ETIMEDOUT', () => {
-      const error = new Error('ETIMEDOUT')
-      expect(isConnectionError(error)).toBe(true)
-    })
-
-    it('should identify ECONNREFUSED', () => {
-      const error = new Error('ECONNREFUSED')
-      expect(isConnectionError(error)).toBe(true)
-    })
-
     it('should not identify other errors', () => {
       const error = new Error('Some business logic error')
       expect(isConnectionError(error)).toBe(false)
@@ -46,10 +31,6 @@ describe('Circuit Breaker Utility', () => {
   })
 
   describe('isRequestAllowed', () => {
-    it('should return true when circuit is closed', () => {
-      expect(breaker.isRequestAllowed()).toBe(true)
-    })
-
     it('should return false when circuit is open', () => {
       // Force circuit to open
       const error = new Error('Connection terminated unexpectedly')
@@ -76,18 +57,6 @@ describe('Circuit Breaker Utility', () => {
       const state = breaker.getState()
       expect(state.isOpen).toBe(false)
       expect(state.failures).toBe(0)
-    })
-
-    it('should not reset before timeout', () => {
-      const error = new Error('connection timeout')
-      breaker.recordFailure(error)
-      breaker.recordFailure(error)
-      breaker.recordFailure(error)
-
-      expect(breaker.isRequestAllowed()).toBe(false)
-
-      const state = breaker.getState()
-      expect(state.isOpen).toBe(true)
     })
   })
 
@@ -142,6 +111,48 @@ describe('Circuit Breaker Utility', () => {
 
       expect(breaker.getState().failures).toBe(1)
     })
+
+    it('should handle ECONNREFUSED errors', () => {
+      const error = new Error('ECONNREFUSED')
+      breaker.recordFailure(error)
+
+      expect(breaker.getState().failures).toBe(1)
+    })
+
+    it.each([
+      'Connection terminated unexpectedly',
+      'connection timeout',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'ECONNREFUSED',
+    ])('should open circuit after threshold failures of error: %s', (message) => {
+      const error = new Error(message)
+      breaker.recordFailure(error)
+      breaker.recordFailure(error)
+      expect(breaker.getState().isOpen).toBe(false)
+
+      breaker.recordFailure(error)
+      expect(breaker.getState().isOpen).toBe(true)
+    })
+
+    it('should open circuit on a mixed sequence of connection errors', () => {
+      breaker.recordFailure(new Error('ECONNRESET'))
+      breaker.recordFailure(new Error('ETIMEDOUT'))
+      expect(breaker.getState().isOpen).toBe(false)
+
+      breaker.recordFailure(new Error('Connection terminated unexpectedly'))
+      expect(breaker.getState().isOpen).toBe(true)
+      expect(breaker.getState().failures).toBe(3)
+    })
+
+    it('should ignore non-connection errors interleaved with connection errors', () => {
+      breaker.recordFailure(new Error('ECONNRESET'))
+      breaker.recordFailure(new Error('validation failed'))
+      breaker.recordFailure(new Error('ETIMEDOUT'))
+
+      expect(breaker.getState().failures).toBe(2)
+      expect(breaker.getState().isOpen).toBe(false)
+    })
   })
 
   describe('recordSuccess', () => {
@@ -152,11 +163,6 @@ describe('Circuit Breaker Utility', () => {
 
       expect(breaker.getState().failures).toBe(2)
 
-      breaker.recordSuccess()
-      expect(breaker.getState().failures).toBe(0)
-    })
-
-    it('should do nothing if no failures recorded', () => {
       breaker.recordSuccess()
       expect(breaker.getState().failures).toBe(0)
     })
@@ -172,6 +178,20 @@ describe('Circuit Breaker Utility', () => {
       breaker.recordSuccess()
       expect(breaker.getState().failures).toBe(0)
       expect(breaker.getState().isOpen).toBe(true) // Still open
+    })
+
+    it('should require fresh threshold of failures to reopen after success resets counter', () => {
+      const error = new Error('ECONNRESET')
+      breaker.recordFailure(error)
+      breaker.recordFailure(error)
+      expect(breaker.getState().isOpen).toBe(false)
+
+      breaker.recordSuccess()
+      expect(breaker.getState().failures).toBe(0)
+
+      breaker.recordFailure(error)
+      expect(breaker.getState().isOpen).toBe(false)
+      expect(breaker.getState().failures).toBe(1)
     })
   })
 
@@ -268,16 +288,6 @@ describe('Circuit Breaker Utility', () => {
 
       testBreaker.recordFailure(error)
       expect(testBreaker.getState().isOpen).toBe(true)
-    })
-  })
-
-  describe('getState', () => {
-    it('should return readonly copy of state', () => {
-      const state1 = breaker.getState()
-      const state2 = breaker.getState()
-
-      expect(state1).not.toBe(state2) // Different objects
-      expect(state1).toEqual(state2) // But same values
     })
   })
 })

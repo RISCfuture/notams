@@ -43,17 +43,17 @@ async function main() {
       logger.info({ port: PORT }, 'HTTP server listening')
     })
 
-    // Start JMS ingestion service (only if credentials are configured)
-    if (process.env.JMS_USERNAME && process.env.JMS_PASSWORD) {
+    // Start NMS ingestion service (only if credentials are configured)
+    if (process.env.NMS_CLIENT_ID && process.env.NMS_CLIENT_SECRET) {
       try {
         ingestionService = new NOTAMIngestionService()
         ingestionService.start()
-        logger.info('JMS ingestion service started')
+        logger.info('NMS ingestion service started')
       } catch (error) {
-        logger.error({ error }, 'Failed to start JMS ingestion service, continuing with API only')
+        logger.error({ error }, 'Failed to start NMS ingestion service, continuing with API only')
       }
     } else {
-      logger.warn('JMS credentials not configured, ingestion service not started')
+      logger.warn('NMS credentials not configured, ingestion service not started')
     }
 
     // Graceful shutdown

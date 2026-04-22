@@ -37,6 +37,16 @@ export const matchesConnectionError = (error: unknown): boolean => {
 }
 
 /**
+ * Retriable error detector for HTTP clients (e.g. the NMS API).
+ * Matches fetch network failures (TypeError) and errors tagged `retriable: true`.
+ */
+export const isRetriableHttpError = (error: unknown): boolean => {
+  if (error instanceof TypeError) return true
+  if (typeof error !== 'object' || error === null) return false
+  return (error as { retriable?: unknown }).retriable === true
+}
+
+/**
  * Default retriable error detector for database connection errors
  */
 export const isRetriableDatabaseError = (error: unknown): boolean => {

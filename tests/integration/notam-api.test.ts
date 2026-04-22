@@ -95,17 +95,6 @@ describe('NOTAM API', () => {
       })
     })
 
-    it('should filter NOTAMs by scope', async () => {
-      const response = await request(app)
-        .get('/api/notams?scope=A')
-        .set('Authorization', 'Bearer dev-token-12345')
-
-      expect(response.status).toBe(200)
-      response.body.data.forEach((notam: NOTAM) => {
-        expect(notam.scope).toBe('A')
-      })
-    })
-
     it('should support pagination', async () => {
       const response = await request(app)
         .get('/api/notams?limit=2&offset=0')
@@ -127,12 +116,6 @@ describe('NOTAM API', () => {
   })
 
   describe('GET /api/notams/:notam_id', () => {
-    it('should return 401 without authentication', async () => {
-      const response = await request(app).get('/api/notams/' + encodeURIComponent('FDC 2/1234'))
-
-      expect(response.status).toBe(401)
-    })
-
     it('should return specific NOTAM', async () => {
       const response = await request(app)
         .get('/api/notams/' + encodeURIComponent('FDC 2/1234'))

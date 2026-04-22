@@ -6,9 +6,9 @@ This guide will walk you through setting up the NOTAM ingestion service locally.
 
 Make sure you have the following installed:
 
-- **Node.js 22+**: `node --version`
+- **Node.js 24+**: `node --version`
 - **PostgreSQL 17+**: `psql --version`
-- **1Password CLI** (for JMS credentials): `op --version`
+- **1Password CLI** (for NMS credentials): `op --version`
 
 ## Step 1: Database Setup
 
@@ -63,29 +63,28 @@ PORT=8080
 DATABASE_URL=postgresql://notams@localhost/notams_development
 TEST_DATABASE_URL=postgresql://notams@localhost/notams_test
 
-# JMS Configuration (get from 1Password)
-JMS_HOST=swim.faa.gov
-JMS_PORT=61614
-JMS_USERNAME=<from-1password>
-JMS_PASSWORD=<from-1password>
-JMS_DESTINATION=/topic/faa.notam.all
+# NMS API Configuration (get from 1Password)
+NMS_BASE_URL=https://api-staging.cgifederal-aim.com
+NMS_CLIENT_ID=<from-1password>
+NMS_CLIENT_SECRET=<from-1password>
+NMS_POLL_INTERVAL_MS=300000
 
 # Optional (for production)
 SENTRY_DSN=
 LOG_LEVEL=info
 ```
 
-### Get JMS Credentials from 1Password
+### Get NMS Credentials from 1Password
 
 If you have 1Password CLI configured:
 
 ```bash
 # View the credentials
-op item get "FAA SWIFT" --format json | jq
+op item get "FAA NMS API" --format json | jq
 
 # Or directly set in .env:
-echo "JMS_USERNAME=$(op read 'op://Private/FAA SWIFT/username')" >> .env
-echo "JMS_PASSWORD=$(op read 'op://Private/FAA SWIFT/password')" >> .env
+echo "NMS_CLIENT_ID=$(op read 'op://Private/FAA NMS API/client_id')" >> .env
+echo "NMS_CLIENT_SECRET=$(op read 'op://Private/FAA NMS API/client_secret')" >> .env
 ```
 
 ## Step 4: Build the Project
@@ -238,7 +237,7 @@ See [README.md](./README.md#troubleshooting) for detailed troubleshooting guide.
 
 ## Next Steps
 
-- Configure JMS credentials from 1Password for real data ingestion (see step 3 above)
+- Configure NMS credentials from 1Password for real data ingestion (see step 3 above)
 - Set up Sentry for error tracking (optional, see [README.md](./README.md#monitoring))
 - Deploy to Fly.io (see [README.md](./README.md#deployment-to-flyio))
 - Set up monitoring and alerts

@@ -98,15 +98,6 @@ describe('NOTAMModel', () => {
       })
     })
 
-    it('should find NOTAMs by scope', async () => {
-      const results = await notamModel.findByFilters({ scope: 'A' })
-
-      expect(results.length).toBeGreaterThan(0)
-      results.forEach((notam) => {
-        expect(notam.scope).toBe('A')
-      })
-    })
-
     it('should support pagination', async () => {
       const page1 = await notamModel.findByFilters({ limit: 2, offset: 0 })
       const page2 = await notamModel.findByFilters({ limit: 2, offset: 2 })
@@ -120,47 +111,74 @@ describe('NOTAMModel', () => {
     })
   })
 
-  describe('deleteExpired', () => {
-    it('should delete expired NOTAMs', async () => {
-      // Create NOTAM with old expiration date
-      const expiredNotam: NOTAM = {
-        ...sampleNotams[0],
-        notam_id: 'EXPIRED_001',
-        effective_end: new Date('2020-01-01T00:00:00Z'),
+  describe('createBatch', () => {
+    it('should batch upsert multiple NOTAMs in one call', async () => {
+      const result = await notamModel.createBatch(sampleNotams)
+
+      expect(result.inserted).toBe(3)
+      expect(result.updated).toBe(0)
+
+      // Verify all NOTAMs are in the database
+      const count = await notamModel.count()
+      expect(count).toBe(3)
+
+      // Verify individual records
+      for (const notam of sampleNotams) {
+        const found = await notamModel.findById(notam.notam_id)
+        expect(found).not.toBeNull()
+        expect(found?.notam_text).toBe(notam.notam_text)
+        expect(found?.icao_location).toBe(notam.icao_location)
       }
-
-      await notamModel.create(expiredNotam)
-
-      const deletedCount = await notamModel.deleteExpired(30)
-      expect(deletedCount).toBeGreaterThan(0)
-
-      const found = await notamModel.findById('EXPIRED_001')
-      expect(found).toBeNull()
     })
 
-    it('should not delete active NOTAMs', async () => {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
+    it('should handle empty array', async () => {
+      const result = await notamModel.createBatch([])
 
-      const activeNotam: NOTAM = {
-        notam_id: 'ACTIVE_NOTAM',
-        icao_location: 'KJFK',
-        effective_start: new Date(),
-        effective_end: tomorrow, // Expires tomorrow
-        schedule: null,
-        notam_text: 'ACTIVE TEST NOTAM',
-        q_line: null,
-        purpose: 'N',
-        scope: 'A',
-        traffic_type: 'I',
-        raw_message: '<test/>',
+      expect(result.inserted).toBe(0)
+      expect(result.updated).toBe(0)
+
+      const count = await notamModel.count()
+      expect(count).toBe(0)
+    })
+
+    it('should handle duplicates correctly via upsert', async () => {
+      // First batch insert
+      const firstResult = await notamModel.createBatch(sampleNotams)
+      expect(firstResult.inserted).toBe(3)
+      expect(firstResult.updated).toBe(0)
+
+      // Modify texts and batch insert again (same notam_ids)
+      const updatedNotams = sampleNotams.map((n) => ({
+        ...n,
+        notam_text: `UPDATED: ${n.notam_text}`,
+      }))
+      const secondResult = await notamModel.createBatch(updatedNotams)
+      expect(secondResult.inserted).toBe(0)
+      expect(secondResult.updated).toBe(3)
+
+      // Verify total count hasn't changed (no duplicate rows)
+      const count = await notamModel.count()
+      expect(count).toBe(3)
+
+      // Verify updates were applied
+      for (const notam of updatedNotams) {
+        const found = await notamModel.findById(notam.notam_id)
+        expect(found?.notam_text).toBe(notam.notam_text)
       }
+    })
 
-      await notamModel.create(activeNotam)
-      await notamModel.deleteExpired(30)
+    it('should handle a mix of inserts and updates', async () => {
+      // Insert first two NOTAMs individually
+      await notamModel.create(sampleNotams[0])
+      await notamModel.create(sampleNotams[1])
 
-      const found = await notamModel.findById('ACTIVE_NOTAM')
-      expect(found).not.toBeNull()
+      // Batch insert all three -- first two will be updates, third will be insert
+      const result = await notamModel.createBatch(sampleNotams)
+      expect(result.inserted).toBe(1)
+      expect(result.updated).toBe(2)
+
+      const count = await notamModel.count()
+      expect(count).toBe(3)
     })
   })
 

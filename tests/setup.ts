@@ -4,7 +4,11 @@ import { pool } from '../src/config/database'
 
 const MIGRATIONS_DIR = join(__dirname, '../migrations')
 
-const migrations = ['001_create_notams.sql', '002_create_tokens.sql']
+const migrations = [
+  '001_create_notams.sql',
+  '002_create_tokens.sql',
+  '003_create_ingestion_state.sql',
+]
 
 beforeAll(async () => {
   // Verify we're using test database
@@ -16,6 +20,7 @@ beforeAll(async () => {
   // Drop all tables to ensure clean state
   await pool.query('DROP TABLE IF EXISTS notams CASCADE')
   await pool.query('DROP TABLE IF EXISTS api_tokens CASCADE')
+  await pool.query('DROP TABLE IF EXISTS ingestion_state CASCADE')
 
   // Run migrations
   for (const migration of migrations) {
@@ -28,6 +33,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Clean up test data between tests
   await pool.query('DELETE FROM notams')
+  await pool.query('DELETE FROM ingestion_state')
 })
 
 afterAll(async () => {

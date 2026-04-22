@@ -231,14 +231,14 @@ Retrieve a specific NOTAM by its ID.
     "purpose": "N",
     "scope": "A",
     "traffic_type": "I",
-    "raw_message": "<AIXMBasicMessage>...</AIXMBasicMessage>",
+    "raw_message": "{\"type\":\"Feature\",\"properties\":{...}}",
     "created_at": "2025-01-15T12:00:00.000Z",
     "updated_at": "2025-01-15T12:00:00.000Z"
   }
 }
 ```
 
-**Note:** This endpoint includes the `raw_message` field containing the original AIXM XML or text NOTAM.
+**Note:** This endpoint includes the `raw_message` field containing the original GeoJSON from the NMS API.
 
 #### Examples
 
