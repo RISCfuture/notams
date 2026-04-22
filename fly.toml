@@ -6,6 +6,9 @@ primary_region = "sjc"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  release_command = "node --require ./.pnp.cjs dist/scripts/migrate.js"
+
 [env]
   NODE_ENV = "production"
   PORT = "8080"
