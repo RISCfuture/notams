@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
       - name: Create Sentry release
