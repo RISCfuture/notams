@@ -152,15 +152,6 @@ export const ingestionMessagesReceivedTotal = isProduction
     })
   : (noopCounter as unknown as Counter<'source'>)
 
-export const ingestionReconnectAttemptsTotal = isProduction
-  ? new Counter({
-      name: 'ingestion_reconnect_attempts_total',
-      help: 'Total number of ingestion reconnection attempts',
-      labelNames: ['success'] as const,
-      registers: [metricsRegistry],
-    })
-  : (noopCounter as unknown as Counter<'success'>)
-
 export const ingestionPollDuration = isProduction
   ? new Histogram({
       name: 'ingestion_poll_duration_seconds',
