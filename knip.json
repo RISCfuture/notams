@@ -2,8 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/scripts/*.ts"],
   "project": ["src/**/*.ts"],
-  "ignoreDependencies": ["pino-pretty", "jiti", "ts-node", "oxlint"],
-  "ignoreBinaries": ["tsc", "ts-node", "vitest", "oxlint", "knip", "prettier"],
+  "ignoreDependencies": ["pino-pretty", "jiti", "oxlint", "tsx"],
+  "ignoreBinaries": ["tsc", "tsx", "vitest", "oxlint", "knip", "prettier"],
   "vitest": {
     "entry": ["tests/**/*.test.ts"],
     "config": ["vitest.config.ts"]

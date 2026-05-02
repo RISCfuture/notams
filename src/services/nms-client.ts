@@ -1,8 +1,8 @@
 import { withRetry, isRetriableHttpError } from '../utils/retry'
 
-export type NMSStatus = 'Success' | 'Failure'
+type NMSStatus = 'Success' | 'Failure'
 
-export interface NMSEnvelope<T> {
+interface NMSEnvelope<T> {
   status: NMSStatus
   errors?: { code: string; message: string }[]
   data: T
