@@ -25,6 +25,7 @@ const RETRIABLE_PG_CODES = new Set([
   '08006', // connection_failure
   '08P01', // protocol_violation
   '53300', // too_many_connections
+  '40P01', // deadlock_detected — loser is fully rolled back, safe to retry
 ])
 
 /** Check if an error message matches any known connection error pattern */

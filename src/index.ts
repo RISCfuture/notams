@@ -5,7 +5,6 @@ import * as Sentry from '@sentry/node'
 import { createServer } from './server'
 import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database'
 import { logger } from './config/logger'
-import { NOTAMIngestionService } from './services/notam-ingestion'
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10)
 
@@ -20,11 +19,9 @@ process.on('unhandledRejection', (reason: unknown) => {
   Sentry.captureException(reason)
 })
 
-let ingestionService: NOTAMIngestionService | null = null
-
 async function main() {
   try {
-    logger.info('Starting NOTAM service')
+    logger.info('Starting NOTAM web server')
 
     // Test database connection
     const dbConnected = await testConnection()
@@ -43,19 +40,6 @@ async function main() {
       logger.info({ port: PORT }, 'HTTP server listening')
     })
 
-    // Start NMS ingestion service (only if credentials are configured)
-    if (process.env.NMS_CLIENT_ID && process.env.NMS_CLIENT_SECRET) {
-      try {
-        ingestionService = new NOTAMIngestionService()
-        ingestionService.start()
-        logger.info('NMS ingestion service started')
-      } catch (error) {
-        logger.error({ error }, 'Failed to start NMS ingestion service, continuing with API only')
-      }
-    } else {
-      logger.warn('NMS credentials not configured, ingestion service not started')
-    }
-
     // Graceful shutdown
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Received shutdown signal')
@@ -64,11 +48,6 @@ async function main() {
       server.close(() => {
         logger.info('HTTP server closed')
       })
-
-      // Stop ingestion service
-      if (ingestionService) {
-        ingestionService.stop()
-      }
 
       // Stop health monitoring
       stopHealthCheck()

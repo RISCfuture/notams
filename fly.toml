@@ -13,13 +13,23 @@ primary_region = "sjc"
   NODE_ENV = "production"
   PORT = "8080"
 
-# Disable auto start/stop - service must always run for JMS ingestion
+# Split into two process groups: `web` serves HTTP, `ingest` runs the singleton
+# NMS poller. Running ingest on multiple machines causes concurrent upserts on
+# overlapping rows in `notams`, which deadlock under load.
+[processes]
+  web = "node --require ./.pnp.cjs dist/index.js"
+  ingest = "node --require ./.pnp.cjs dist/ingest.js"
+
+# Scope to `web`; ingest has no HTTP. Suspend web on idle so it wakes on demand
+# without paying for an always-on read-only API; the ingest worker stays always-on
+# via its own scale count (`fly scale count -g ingest=1`).
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false
-  auto_start_machines = false
-  min_machines_running = 1
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["web"]
   [http_service.concurrency]
     type = "connections"
     hard_limit = 100

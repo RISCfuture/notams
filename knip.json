@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/scripts/*.ts"],
+  "entry": ["src/index.ts", "src/ingest.ts", "src/scripts/*.ts"],
   "project": ["src/**/*.ts"],
   "ignoreDependencies": ["pino-pretty", "jiti", "oxlint", "tsx"],
   "ignoreBinaries": ["tsc", "tsx", "vitest", "oxlint", "knip", "prettier"],
