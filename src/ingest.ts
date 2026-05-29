@@ -12,9 +12,10 @@ if (process.env.SENTRY_DSN) {
 }
 
 import express from 'express'
-import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database'
+import { testConnection, closePool } from './config/database'
 import { logger } from './config/logger'
-import { NOTAMIngestionService } from './services/notam-ingestion'
+import { NOTAMIngestionService, INITIAL_LOAD_TIMEOUT_MS } from './services/notam-ingestion'
+import { startIngestWatchdog } from './services/ingest-watchdog'
 import healthRouter from './routes/health'
 import metricsRouter from './routes/metrics'
 
@@ -42,9 +43,6 @@ async function main(): Promise<void> {
       process.exit(1)
     }
 
-    startHealthCheck()
-    logger.info('Database health monitoring started')
-
     if (!process.env.NMS_CLIENT_ID || !process.env.NMS_CLIENT_SECRET) {
       logger.error('NMS credentials not configured; ingestion worker has nothing to do, exiting')
       process.exit(1)
@@ -53,6 +51,22 @@ async function main(): Promise<void> {
     ingestionService = new NOTAMIngestionService()
     ingestionService.start()
     logger.info('NMS ingestion service started')
+
+    const svc = ingestionService
+    // Must exceed the initial-load window: markIngestSuccess() only fires after a poll
+    // (or the up-to-INITIAL_LOAD_TIMEOUT_MS initial load) completes, so a fresh worker's
+    // first success can legitimately be ~20 min out. A shorter threshold would kill a
+    // slow initial load mid-flight and restart-loop. Steady-state polls are far faster.
+    const DEFAULT_STALE_THRESHOLD_MS = INITIAL_LOAD_TIMEOUT_MS + 5 * 60 * 1000
+    const envStaleThresholdMs = Number(process.env.INGEST_STALE_THRESHOLD_MS)
+    const staleThresholdMs =
+      Number.isFinite(envStaleThresholdMs) && envStaleThresholdMs > 0
+        ? envStaleThresholdMs
+        : DEFAULT_STALE_THRESHOLD_MS
+    const stopWatchdog = startIngestWatchdog(() => svc.getLastSuccessfulPollTime(), {
+      staleThresholdMs,
+    })
+    logger.info({ staleThresholdMs }, 'Ingestion watchdog started')
 
     // Minimal HTTP listener: exposes /metrics for Fly's Prometheus scraper and
     // /health for liveness checks. No NOTAMs API and no Sentry/express integration —
@@ -71,11 +85,12 @@ async function main(): Promise<void> {
         logger.info('Ingest metrics/health endpoint closed')
       })
 
+      stopWatchdog()
+
       if (ingestionService) {
         ingestionService.stop()
       }
 
-      stopHealthCheck()
       await closePool()
 
       logger.info('Graceful shutdown complete')

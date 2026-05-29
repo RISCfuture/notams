@@ -3,7 +3,7 @@ dotenv.config()
 
 import * as Sentry from '@sentry/node'
 import { createServer } from './server'
-import { testConnection, closePool, startHealthCheck, stopHealthCheck } from './config/database'
+import { testConnection, closePool } from './config/database'
 import { logger } from './config/logger'
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10)
@@ -30,10 +30,6 @@ async function main() {
       process.exit(1)
     }
 
-    // Start database health monitoring
-    startHealthCheck()
-    logger.info('Database health monitoring started')
-
     // Create and start Express server
     const app = createServer()
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -48,9 +44,6 @@ async function main() {
       server.close(() => {
         logger.info('HTTP server closed')
       })
-
-      // Stop health monitoring
-      stopHealthCheck()
 
       // Close database pool
       await closePool()

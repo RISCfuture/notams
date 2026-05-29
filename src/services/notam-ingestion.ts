@@ -21,7 +21,9 @@ import {
   ingestionPollDuration,
   circuitBreakerState,
   circuitBreakerFailuresTotal,
+  ingestLastSuccessTimestamp,
 } from '../config/metrics'
+import { reportIngestHeartbeat } from '../config/ingest-monitor'
 
 /** Chunk size for streaming initial-load upserts. Keeps peak memory bounded. */
 const INITIAL_LOAD_BATCH_SIZE = 500
@@ -40,7 +42,7 @@ const MAX_DELTA_GAP_MS = 23 * 60 * 60 * 1000
  * poll flips the circuit breaker and the next 5-min poll retries with a fresh
  * signed URL.
  */
-const INITIAL_LOAD_TIMEOUT_MS = 20 * 60 * 1000
+export const INITIAL_LOAD_TIMEOUT_MS = 20 * 60 * 1000
 
 type SourceFormat = 'geojson' | 'aixm'
 
@@ -81,6 +83,7 @@ export class NOTAMIngestionService {
   private immediateRetryTimer: ReturnType<typeof setTimeout> | null = null
   private immediateRetryPending = false
   private lastPollTime: Date | null = null
+  private lastSuccessfulPollAt: Date | null = null
   private pollIntervalMs: number
   private tokenProvider: NMSTokenProvider
 
@@ -202,6 +205,7 @@ export class NOTAMIngestionService {
       await this.upsertBatch(parsedNotams, 'geojson', features.length)
 
       this.circuitBreaker.recordSuccess()
+      this.markIngestSuccess()
       this.immediateRetryPending = false
       this.lastPollTime = pollStartedAt
       // Only persist on non-empty polls. After a restart following empty polls the
@@ -306,6 +310,7 @@ export class NOTAMIngestionService {
     await this.stateModel.setLastPollTime(pollStartedAt)
 
     this.circuitBreaker.recordSuccess()
+    this.markIngestSuccess()
     this.immediateRetryPending = false
     ingestionConnectionStatus.set({ source: 'nms' }, 1)
 
@@ -422,6 +427,18 @@ export class NOTAMIngestionService {
     ingestionMessagesReceivedTotal.inc({ source: 'nms' }, stats.totalMessages)
 
     return stats
+  }
+
+  /** Record a successful poll: freshness state, metric, and Sentry Crons heartbeat. */
+  private markIngestSuccess(): void {
+    this.lastSuccessfulPollAt = new Date()
+    ingestLastSuccessTimestamp.set(Math.floor(this.lastSuccessfulPollAt.getTime() / 1000))
+    reportIngestHeartbeat(this.pollIntervalMs)
+  }
+
+  /** Timestamp of the last successful poll (delta or initial load), or null. */
+  getLastSuccessfulPollTime(): Date | null {
+    return this.lastSuccessfulPollAt
   }
 
   private scheduleNextPoll(): void {

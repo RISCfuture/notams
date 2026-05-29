@@ -35,7 +35,8 @@ See [README.md](./README.md#managing-api-tokens) for information on creating and
 
 ### Health Check
 
-Check the service health status.
+Liveness probe — confirms the process is up. This endpoint does not touch the
+database and always returns `200`.
 
 **Endpoint:** `GET /health`
 
@@ -46,8 +47,7 @@ Check the service health status.
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-01-15T12:00:00.000Z",
-  "database": "connected"
+  "timestamp": "2026-05-29T12:00:00.000Z"
 }
 ```
 
@@ -59,8 +59,7 @@ curl http://localhost:8080/health
 
 **Response Codes:**
 
-- `200` - Service is healthy
-- `503` - Service is unhealthy (database disconnected)
+- `200` - Service is running
 
 ---
 
@@ -288,13 +287,12 @@ All endpoints return consistent error responses:
 
 ### Common Error Codes
 
-| Status Code | Error Code            | Description                               |
-| ----------- | --------------------- | ----------------------------------------- |
-| `400`       | `INVALID_PARAMETERS`  | Query parameters are invalid or malformed |
-| `401`       | `UNAUTHORIZED`        | Missing or invalid authentication token   |
-| `404`       | `NOT_FOUND`           | Resource not found                        |
-| `500`       | `INTERNAL_ERROR`      | Server error (logged to Sentry)           |
-| `503`       | `SERVICE_UNAVAILABLE` | Service is unhealthy (database down)      |
+| Status Code | Error Code           | Description                               |
+| ----------- | -------------------- | ----------------------------------------- |
+| `400`       | `INVALID_PARAMETERS` | Query parameters are invalid or malformed |
+| `401`       | `UNAUTHORIZED`       | Missing or invalid authentication token   |
+| `404`       | `NOT_FOUND`          | Resource not found                        |
+| `500`       | `INTERNAL_ERROR`     | Server error (logged to Sentry)           |
 
 ### Example Error Response
 

@@ -241,6 +241,22 @@ describe('NMS Ingestion E2E', () => {
       expect(lastPollUrl).toContain(urlEncoded)
     })
 
+    it('records last successful poll time after a delta poll', async () => {
+      const recentTime = new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
+      await stateModel.setLastPollTime(recentTime)
+
+      service = new NOTAMIngestionService()
+      expect(service.getLastSuccessfulPollTime()).toBeNull()
+
+      service.start()
+      await waitFor(async () => (await notamModel.count()) > 0)
+      service.stop()
+
+      const last = service.getLastSuccessfulPollTime()
+      expect(last).not.toBeNull()
+      expect(last!.getTime()).toBeGreaterThan(recentTime.getTime())
+    })
+
     it('should persist poll timestamp to database after successful poll', async () => {
       const recentTime = new Date(Date.now() - 5 * 60 * 1000) // 5 minutes ago
       await stateModel.setLastPollTime(recentTime)

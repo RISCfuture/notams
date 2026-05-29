@@ -29,16 +29,23 @@ describe('NOTAM API', () => {
   })
 
   describe('GET /health', () => {
-    it('should return 200 OK with health status', async () => {
+    it('should return 200 OK liveness without a database dependency', async () => {
       const response = await request(app).get('/health')
 
       expect(response.status).toBe(200)
       expect(response.body.status).toBe('ok')
-      expect(response.body.database).toBe('connected')
+      expect(typeof response.body.timestamp).toBe('string')
+      // Liveness no longer reports DB status — that moved to the ingest freshness signal.
+      expect(response.body.database).toBeUndefined()
     })
   })
 
   describe('GET /api/notams', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      delete process.env.DB_RETRY_BACKOFF_BASE
+    })
+
     it('should return 401 without authentication', async () => {
       const response = await request(app).get('/api/notams')
 
@@ -112,6 +119,19 @@ describe('NOTAM API', () => {
         .set('Authorization', 'Bearer dev-token-12345')
 
       expect(response.status).toBe(400)
+    })
+
+    it('retries a transient connection error and still returns 200', async () => {
+      process.env.DB_RETRY_BACKOFF_BASE = '0' // no real backoff sleep in tests
+      const transient = new Error('Connection terminated unexpectedly')
+      const spy = vi.spyOn(NOTAMModel.prototype, 'findByFilters').mockRejectedValueOnce(transient) // first attempt fails, then calls through
+
+      const response = await request(app)
+        .get('/api/notams')
+        .set('Authorization', 'Bearer dev-token-12345')
+
+      expect(response.status).toBe(200)
+      expect(spy).toHaveBeenCalledTimes(2) // failed once, retried, succeeded
     })
   })
 

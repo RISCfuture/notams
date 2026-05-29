@@ -161,3 +161,11 @@ export const ingestionPollDuration = isProduction
       registers: [metricsRegistry],
     })
   : (noopHistogram as unknown as Histogram<'source'>)
+
+export const ingestLastSuccessTimestamp = isProduction
+  ? new Gauge({
+      name: 'ingest_last_success_timestamp_seconds',
+      help: 'Unix timestamp (seconds) of the last successful ingestion poll',
+      registers: [metricsRegistry],
+    })
+  : (noopGauge as unknown as Gauge)

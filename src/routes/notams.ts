@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { NOTAMModel, NOTAMQueryFilters } from '../models/notam'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth'
 import { logger } from '../config/logger'
+import { withRetry } from '../utils/retry'
 
 const router = Router()
 const notamModel = new NOTAMModel()
@@ -49,10 +50,9 @@ router.get('/notams', authenticateToken, async (req: AuthenticatedRequest, res: 
     }
 
     // Get NOTAMs and total count in parallel
-    const [notams, total] = await Promise.all([
-      notamModel.findByFilters(filters),
-      notamModel.count(filters),
-    ])
+    const [notams, total] = await withRetry(() =>
+      Promise.all([notamModel.findByFilters(filters), notamModel.count(filters)]),
+    )
 
     logger.info(
       {
@@ -95,7 +95,7 @@ router.get(
         return
       }
 
-      const notam = await notamModel.findById(parsed.data)
+      const notam = await withRetry(() => notamModel.findById(parsed.data))
 
       if (!notam) {
         res.status(404).json({ error: 'NOTAM not found' })

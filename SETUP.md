@@ -175,8 +175,7 @@ Expected response:
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-01-15T12:00:00.000Z",
-  "database": "connected"
+  "timestamp": "2026-05-29T12:00:00.000Z"
 }
 ```
 

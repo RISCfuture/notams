@@ -20,6 +20,14 @@ primary_region = "sjc"
   web = "node --require ./.pnp.cjs dist/index.js"
   ingest = "node --require ./.pnp.cjs dist/ingest.js"
 
+# Recover a wedged ingest worker: the in-process watchdog exits non-zero when
+# ingestion goes stale, and this policy relaunches the crashed Machine. Scoped to
+# `ingest`; `web` keeps Fly's default restart behavior.
+[[restart]]
+  policy = "on-failure"
+  retries = 10
+  processes = ["ingest"]
+
 # Scope to `web`; ingest has no HTTP. Suspend web on idle so it wakes on demand
 # without paying for an always-on read-only API; the ingest worker stays always-on
 # via its own scale count (`fly scale count -g ingest=1`).

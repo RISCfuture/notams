@@ -112,31 +112,3 @@ export const getPoolStats = () => ({
   idle: pool.idleCount,
   waiting: pool.waitingCount,
 })
-
-let healthCheckInterval: ReturnType<typeof setInterval> | null = null
-
-export const startHealthCheck = (): void => {
-  if (healthCheckInterval) {
-    return
-  }
-
-  healthCheckInterval = setInterval(() => {
-    void (async () => {
-      try {
-        const client = await pool.connect()
-        await client.query('SELECT 1')
-        client.release()
-        logger.debug({ poolStats: getPoolStats() }, 'Pool health check passed')
-      } catch (error) {
-        logger.error({ error, poolStats: getPoolStats() }, 'Pool health check failed')
-      }
-    })()
-  }, 30000)
-}
-
-export const stopHealthCheck = (): void => {
-  if (healthCheckInterval) {
-    clearInterval(healthCheckInterval)
-    healthCheckInterval = null
-  }
-}
