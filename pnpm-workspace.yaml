@@ -1,0 +1,6 @@
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
+publicHoistPattern:
+  - '*@types/express-serve-static-core*'

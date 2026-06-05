@@ -1,19 +1,19 @@
 # Multi-stage build for efficiency
 
 # Stage 1: Build
-FROM node:25.6-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and Yarn config
-COPY package.json yarn.lock .yarnrc.yml ./
+# Enable pnpm via corepack (pinned by the packageManager field).
+# Node 26 images no longer bundle corepack, so install it first.
+RUN npm install -g corepack@latest && corepack enable
 
-# Install and enable corepack to manage Yarn via packageManager field
-RUN npm install -g --force corepack
-RUN corepack enable
+# Copy package files and pnpm config
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN yarn install --immutable
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY tsconfig.json tsconfig.app.json ./
@@ -22,30 +22,29 @@ COPY migrations ./migrations
 COPY scripts ./scripts
 
 # Build TypeScript
-RUN yarn build
+RUN pnpm run build
+
+# Prune to production-only dependencies for the runtime image
+RUN pnpm prune --prod
 
 # Stage 2: Production
-FROM node:25.6-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 
-# Copy package files and Yarn config
-COPY package.json yarn.lock .yarnrc.yml ./
+# Enable pnpm via corepack (pinned by the packageManager field).
+# Node 26 images no longer bundle corepack, so install it first.
+RUN npm install -g corepack@latest && corepack enable
 
-# Install and enable corepack to manage Yarn via packageManager field
-RUN npm install -g --force corepack
-RUN corepack enable
+# Copy package files and pnpm config
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Create non-root user first
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy Yarn PnP files and cache from builder with correct ownership
-COPY --from=builder --chown=nodejs:nodejs /app/.yarn ./.yarn
-COPY --from=builder --chown=nodejs:nodejs /app/.pnp.cjs ./
-COPY --from=builder --chown=nodejs:nodejs /app/.pnp.loader.mjs ./
-
-# Copy built application from builder with correct ownership
+# Copy production dependencies and built application from builder
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/migrations ./migrations
 
@@ -58,5 +57,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start application with Yarn PnP loader
-CMD ["node", "--require", "./.pnp.cjs", "dist/index.js"]
+# Start application
+CMD ["node", "dist/index.js"]

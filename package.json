@@ -12,11 +12,11 @@
     "test:coverage": "NODE_ENV=test vitest run --coverage",
     "migrate": "node dist/scripts/migrate.js",
     "prune": "node dist/scripts/prune-notams.js",
-    "lint": "yarn lint:eslint && yarn lint:oxlint",
-    "lint:eslint": "yarn node scripts/lint.cjs",
+    "lint": "pnpm run lint:eslint && pnpm run lint:oxlint",
+    "lint:eslint": "node scripts/lint.cjs",
     "lint:oxlint": "oxlint -c oxlintrc.json src",
     "lint:knip": "knip",
-    "lint:fix": "yarn node scripts/lint.cjs --fix",
+    "lint:fix": "node scripts/lint.cjs --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc -p tsconfig.app.json --noEmit"
@@ -30,7 +30,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@sentry/node": "^10.53.1",
+    "@sentry/node": "^10.56.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.8.0",
@@ -47,26 +47,21 @@
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
-    "@vitest/coverage-v8": "^4.1.7",
-    "eslint": "^10.4.0",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "jiti": "^2.7.0",
-    "knip": "^6.14.1",
-    "oxlint": "^1.66.0",
+    "knip": "^6.15.0",
+    "oxlint": "^1.68.0",
     "prettier": "^3.8.3",
     "supertest": "^7.2.2",
-    "tsx": "^4.22.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4",
-    "vitest": "^4.1.7"
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^4.1.8"
   },
   "engines": {
-    "node": ">=25.0.0"
+    "node": ">=26.0.0"
   },
-  "packageManager": "yarn@4.15.0",
-  "dependenciesMeta": {
-    "unrs-resolver": {
-      "built": false
-    }
-  }
+  "packageManager": "pnpm@11.5.1"
 }

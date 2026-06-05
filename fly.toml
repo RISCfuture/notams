@@ -7,7 +7,7 @@ primary_region = "sjc"
   dockerfile = "Dockerfile"
 
 [deploy]
-  release_command = "node --require ./.pnp.cjs dist/scripts/migrate.js"
+  release_command = "node dist/scripts/migrate.js"
 
 [env]
   NODE_ENV = "production"
@@ -17,8 +17,8 @@ primary_region = "sjc"
 # NMS poller. Running ingest on multiple machines causes concurrent upserts on
 # overlapping rows in `notams`, which deadlock under load.
 [processes]
-  web = "node --require ./.pnp.cjs dist/index.js"
-  ingest = "node --require ./.pnp.cjs dist/ingest.js"
+  web = "node dist/index.js"
+  ingest = "node dist/ingest.js"
 
 # Recover a wedged ingest worker: the in-process watchdog exits non-zero when
 # ingestion goes stale, and this policy relaunches the crashed Machine. Scoped to

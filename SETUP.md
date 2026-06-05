@@ -41,7 +41,7 @@ psql -U notams -d notams_test -c "SELECT NOW();"
 ## Step 2: Install Dependencies
 
 ```bash
-yarn install
+pnpm install
 ```
 
 ## Step 3: Environment Configuration
@@ -90,7 +90,7 @@ echo "NMS_CLIENT_SECRET=$(op read 'op://Private/FAA NMS API/client_secret')" >> 
 ## Step 4: Build the Project
 
 ```bash
-yarn build
+pnpm build
 ```
 
 This compiles TypeScript to JavaScript in the `dist/` directory.
@@ -98,7 +98,7 @@ This compiles TypeScript to JavaScript in the `dist/` directory.
 ## Step 5: Run Database Migrations
 
 ```bash
-yarn migrate
+pnpm migrate
 ```
 
 This will:
@@ -145,19 +145,19 @@ Before starting the service, run tests to ensure everything works:
 
 ```bash
 # Run all tests
-yarn test
+pnpm test
 
 # Run with coverage
-yarn test:coverage
+pnpm test:coverage
 
 # Watch mode (for development)
-yarn test:watch
+pnpm test:watch
 ```
 
 ## Step 8: Start the Development Server
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 The service should start on `http://localhost:8080`.

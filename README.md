@@ -56,11 +56,11 @@ For detailed local development setup, see **[SETUP.md](./SETUP.md)**.
 psql -U postgres -c "CREATE USER notams WITH PASSWORD 'notams';"
 psql -U postgres -c "CREATE DATABASE notams_development OWNER notams;"
 psql -U postgres -c "CREATE DATABASE notams_test OWNER notams;"
-yarn install
+pnpm install
 cp .env.example .env  # Then edit .env with your config
-yarn build
-yarn migrate
-yarn dev
+pnpm build
+pnpm migrate
+pnpm dev
 ```
 
 The service will start on `http://localhost:8080`.
@@ -85,29 +85,29 @@ curl -H "Authorization: Bearer dev-token-12345" \
 ### Run All Tests
 
 ```bash
-yarn test
+pnpm test
 ```
 
 ### Run Tests with Coverage
 
 ```bash
-yarn test:coverage
+pnpm test:coverage
 ```
 
 ### Run Tests in Watch Mode
 
 ```bash
-yarn test:watch
+pnpm test:watch
 ```
 
 ## Scripts
 
-- `yarn build` - Compile TypeScript to JavaScript
-- `yarn start` - Start production server
-- `yarn dev` - Start development server with ts-node
-- `yarn test` - Run tests
-- `yarn migrate` - Run database migrations
-- `yarn prune` - Manually run NOTAM pruning script
+- `pnpm build` - Compile TypeScript to JavaScript
+- `pnpm start` - Start production server
+- `pnpm dev` - Start development server with ts-node
+- `pnpm test` - Run tests
+- `pnpm migrate` - Run database migrations
+- `pnpm prune` - Manually run NOTAM pruning script
 
 ## Deployment to Fly.io
 
@@ -242,7 +242,7 @@ Ensure test database is clean:
 
 ```bash
 psql $TEST_DATABASE_URL -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-yarn migrate
+pnpm migrate
 ```
 
 ## GitHub Actions CI/CD

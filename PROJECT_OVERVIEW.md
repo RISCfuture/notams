@@ -198,18 +198,18 @@ See [API_USAGE.md](./API_USAGE.md) for comprehensive API documentation including
 
 See [SETUP.md](./SETUP.md#step-3-environment-configuration) for detailed environment configuration including how to get NMS credentials from 1Password.
 
-## Yarn Scripts
+## Scripts
 
-See [README.md](./README.md#scripts) for the complete list of available yarn scripts.
+See [README.md](./README.md#scripts) for the complete list of available pnpm scripts.
 
 ## Development Workflow
 
 1. **Make changes** to TypeScript files in `src/`
-2. **Format code**: `yarn format`
-3. **Lint code**: `yarn lint:fix`
-4. **Run tests**: `yarn test`
-5. **Test locally**: `yarn dev`
-6. **Build**: `yarn build`
+2. **Format code**: `pnpm format`
+3. **Lint code**: `pnpm lint:fix`
+4. **Run tests**: `pnpm test`
+5. **Test locally**: `pnpm dev`
+6. **Build**: `pnpm build`
 7. **Deploy**: `fly deploy`
 
 ## Testing Strategy
