@@ -1,0 +1,3 @@
+[sqlfluff]
+dialect = postgres
+exclude_rules = PG01, LT02, LT05, CP03

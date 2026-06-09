@@ -210,7 +210,7 @@ Retrieve a specific NOTAM by its ID.
 | ---------- | ------ | -------- | ---------------------------------- |
 | `notam_id` | string | Yes      | The NOTAM identifier (URL-encoded) |
 
-#### Response Format
+#### Single NOTAM Response Format
 
 ```json
 {
@@ -239,7 +239,7 @@ Retrieve a specific NOTAM by its ID.
 
 **Note:** This endpoint includes the `raw_message` field containing the original GeoJSON from the NMS API.
 
-#### Examples
+#### Single NOTAM Examples
 
 **Get a specific NOTAM (URL encoding required for spaces/slashes):**
 

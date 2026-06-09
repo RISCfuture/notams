@@ -117,7 +117,7 @@ psql -U notams -d notams_development -c "\dt"
 
 You should see:
 
-```
+```text
            List of relations
  Schema |    Name     | Type  | Owner
 --------+-------------+-------+--------
@@ -133,7 +133,7 @@ psql -U notams -d notams_development -c "SELECT token, name FROM api_tokens;"
 
 You should see:
 
-```
+```text
       token       |       name
 ------------------+-------------------
  dev-token-12345  | Development Token

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS api_tokens (
 );
 
 -- Create index on token for fast lookups
-CREATE INDEX IF NOT EXISTS idx_api_tokens_token ON api_tokens(token) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_api_tokens_token ON api_tokens (token) WHERE is_active = TRUE;
 
 -- Insert a default test token for development
 INSERT INTO api_tokens (token, name, is_active)

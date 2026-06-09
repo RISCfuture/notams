@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS notams (
 );
 
 -- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_notams_icao_location ON notams(icao_location);
-CREATE INDEX IF NOT EXISTS idx_notams_effective_start ON notams(effective_start);
-CREATE INDEX IF NOT EXISTS idx_notams_effective_end ON notams(effective_end);
-CREATE INDEX IF NOT EXISTS idx_notams_created_at ON notams(created_at);
-CREATE INDEX IF NOT EXISTS idx_notams_purpose ON notams(purpose);
-CREATE INDEX IF NOT EXISTS idx_notams_scope ON notams(scope);
+CREATE INDEX IF NOT EXISTS idx_notams_icao_location ON notams (icao_location);
+CREATE INDEX IF NOT EXISTS idx_notams_effective_start ON notams (effective_start);
+CREATE INDEX IF NOT EXISTS idx_notams_effective_end ON notams (effective_end);
+CREATE INDEX IF NOT EXISTS idx_notams_created_at ON notams (created_at);
+CREATE INDEX IF NOT EXISTS idx_notams_purpose ON notams (purpose);
+CREATE INDEX IF NOT EXISTS idx_notams_scope ON notams (scope);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

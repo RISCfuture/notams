@@ -20,7 +20,7 @@ A production-ready TypeScript Express.js service that:
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                   FAA NMS (REST API)                    │
 │           HTTPS + OAuth2 client_credentials             │
@@ -84,7 +84,7 @@ Scheduled Job:
 
 ## Project Structure
 
-```
+```text
 notams/
 ├── src/
 │   ├── config/           # Configuration modules
@@ -247,7 +247,7 @@ See [README.md](./README.md#deployment-to-flyio) for complete deployment instruc
 
 - **Setup Instructions**: See [SETUP.md](./SETUP.md)
 - **Full Documentation**: See [README.md](./README.md)
-- **FAA NMS Support**: 7-AWA-NAIMES@faa.gov or 866-466-1336
+- **FAA NMS Support**: <7-AWA-NAIMES@faa.gov> or 866-466-1336
 - **NOTAM Format**: See ICAO Annex 15
 
 ## License

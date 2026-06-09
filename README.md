@@ -26,7 +26,7 @@ A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐
 │    FAA NMS      │
 │   (REST API)    │
