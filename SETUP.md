@@ -7,7 +7,7 @@ This guide will walk you through setting up the NOTAM ingestion service locally.
 Make sure you have the following installed:
 
 - **Node.js 24+**: `node --version`
-- **PostgreSQL 17+**: `psql --version`
+- **PostgreSQL 18+**: `psql --version`
 - **1Password CLI** (for NMS credentials): `op --version`
 
 ## Step 1: Database Setup

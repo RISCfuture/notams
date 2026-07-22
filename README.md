@@ -49,7 +49,7 @@ A TypeScript Express.js service that ingests NOTAMs (Notices to Airmen) from the
 
 For detailed local development setup, see **[SETUP.md](./SETUP.md)**.
 
-**Prerequisites:** Node.js 24+, PostgreSQL 17+, FAA NMS API credentials (from 1Password "FAA NMS API" item)
+**Prerequisites:** Node.js 24+, PostgreSQL 18+, FAA NMS API credentials (from 1Password "FAA NMS API" item)
 
 ```bash
 # Quick setup

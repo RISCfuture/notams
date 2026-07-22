@@ -73,7 +73,7 @@ Scheduled Job:
 | **Language**       | TypeScript 5.3     | Type safety, better DX      |
 | **Runtime**        | Node.js 24         | JavaScript runtime          |
 | **Framework**      | Express.js 4       | HTTP server                 |
-| **Database**       | PostgreSQL 17      | Relational data storage     |
+| **Database**       | PostgreSQL 18      | Relational data storage     |
 | **HTTP Client**    | Native fetch       | NMS REST API polling        |
 | **Validation**     | zod                | Runtime type validation     |
 | **Logging**        | pino + pino-pretty | Structured JSON logs        |
