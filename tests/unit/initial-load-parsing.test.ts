@@ -2,16 +2,27 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { NOTAMParser } from '../../src/services/notam-parser'
 
+const AIXM_MESSAGE_REGEX = /<AIXMBasicMessage[\s\S]*?<\/AIXMBasicMessage>/g
+
+function aixmMessages(): string[] {
+  const xmlPath = join(__dirname, '../fixtures/nms-aixm-initial-load.xml')
+  return readFileSync(xmlPath, 'utf-8').match(AIXM_MESSAGE_REGEX) ?? []
+}
+
+function aixmMessageAt(index: number): string {
+  const messages = aixmMessages()
+  if (index >= messages.length) {
+    throw new Error(`Fixture has no AIXMBasicMessage at index ${String(index)}`)
+  }
+  return messages[index]
+}
+
 describe('Initial Load AIXM Parsing', () => {
   it('should parse extracted AIXMBasicMessage blocks individually', () => {
-    const xmlPath = join(__dirname, '../fixtures/nms-aixm-initial-load.xml')
-    const xmlString = readFileSync(xmlPath, 'utf-8')
-
-    const messageRegex = /<AIXMBasicMessage[\s\S]*?<\/AIXMBasicMessage>/g
-    const matches = xmlString.match(messageRegex) ?? []
-
     const parser = new NOTAMParser()
-    const notams = matches.map((xml) => parser.parseAIXMMessage(xml)).filter((n) => n !== null)
+    const notams = aixmMessages()
+      .map((xml) => parser.parseAIXMMessage(xml))
+      .filter((n) => n !== null)
 
     // The second block has a simple structure the parser can handle;
     // the first block has multiple hasMember elements (RunwayDirection, Runway, etc.)
@@ -28,28 +39,16 @@ describe('Initial Load AIXM Parsing', () => {
     // (RunwayDirection, Runway, RunwayElement, AirportHeliport, Event).
     // The parser expects hasMember to directly contain an Event,
     // so it returns null for this complex structure.
-    const xmlPath = join(__dirname, '../fixtures/nms-aixm-initial-load.xml')
-    const xmlString = readFileSync(xmlPath, 'utf-8')
-
-    const messageRegex = /<AIXMBasicMessage[\s\S]*?<\/AIXMBasicMessage>/g
-    const matches = xmlString.match(messageRegex) ?? []
-
     const parser = new NOTAMParser()
-    const notam = parser.parseAIXMMessage(matches[0])
+    const notam = parser.parseAIXMMessage(aixmMessageAt(0))
 
     // The parser cannot navigate the multi-member structure
     expect(notam).toBeNull()
   })
 
   it('should parse simple single-Event AIXM block from initial load', () => {
-    const xmlPath = join(__dirname, '../fixtures/nms-aixm-initial-load.xml')
-    const xmlString = readFileSync(xmlPath, 'utf-8')
-
-    const messageRegex = /<AIXMBasicMessage[\s\S]*?<\/AIXMBasicMessage>/g
-    const matches = xmlString.match(messageRegex) ?? []
-
     const parser = new NOTAMParser()
-    const notam = parser.parseAIXMMessage(matches[1])
+    const notam = parser.parseAIXMMessage(aixmMessageAt(1))
 
     expect(notam).not.toBeNull()
     expect(notam?.icao_location).toBe('ZBW')

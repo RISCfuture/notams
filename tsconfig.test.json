@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "types": ["node", "vitest/globals"]

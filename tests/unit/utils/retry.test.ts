@@ -170,13 +170,9 @@ describe('Retry Utility', () => {
         return 'success'
       })
 
-      const customIsRetriable = (error: unknown) => {
-        return error instanceof Error && error.message === 'Custom Error'
-      }
-
       const result = await withRetry(operation, {
         maxRetries: 2,
-        isRetriable: customIsRetriable,
+        isRetriable: (error) => error instanceof Error && error.message === 'Custom Error',
       })
 
       expect(result).toBe('success')

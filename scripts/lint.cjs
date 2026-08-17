@@ -31,7 +31,7 @@ async function main() {
     console.log(`\n${errCount} error(s), ${warnCount} warning(s)`)
   }
 
-  process.exit(errCount > 0 ? 1 : 0)
+  process.exit(errCount > 0 || warnCount > 0 ? 1 : 0)
 }
 
 main().catch((err) => {

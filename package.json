@@ -12,14 +12,16 @@
     "test:coverage": "NODE_ENV=test vitest run --coverage",
     "migrate": "node dist/scripts/migrate.js",
     "prune": "node dist/scripts/prune-notams.js",
-    "lint": "pnpm run lint:eslint && pnpm run lint:oxlint",
+    "lint": "pnpm run lint:eslint && pnpm run lint:oxlint && pnpm run lint:knip",
     "lint:eslint": "node scripts/lint.cjs",
-    "lint:oxlint": "oxlint -c oxlintrc.json src",
+    "lint:oxlint": "oxlint -c oxlintrc.json src tests",
     "lint:knip": "knip",
     "lint:fix": "node scripts/lint.cjs --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "tsc -p tsconfig.app.json --noEmit"
+    "type-check": "pnpm run type-check:app && pnpm run type-check:tests",
+    "type-check:app": "tsc -p tsconfig.app.json --noEmit",
+    "type-check:tests": "tsc -p tsconfig.test.json"
   },
   "keywords": [
     "notam",

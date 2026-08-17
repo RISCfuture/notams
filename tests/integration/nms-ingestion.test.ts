@@ -387,7 +387,7 @@ describe('NMS Ingestion E2E', () => {
 
     it('should immediately retry after a single 401 and recover on the next request', async () => {
       const recentTime = new Date(Date.now() - 5 * 60 * 1000)
-      await stateModel.set('last_poll_time', recentTime.toISOString())
+      await stateModel.setLastPollTime(recentTime)
 
       // First poll: return 401. Second poll (the immediate retry): return normal GeoJSON.
       overridePollHandler = (req, res) => {
@@ -453,7 +453,7 @@ describe('NMS Ingestion E2E', () => {
 
     it('should fall back to normal schedule if the immediate retry also returns 401', async () => {
       const recentTime = new Date(Date.now() - 5 * 60 * 1000)
-      await stateModel.set('last_poll_time', recentTime.toISOString())
+      await stateModel.setLastPollTime(recentTime)
 
       // Every poll returns 401.
       overridePollHandler = (req, res) => {
