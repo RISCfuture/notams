@@ -1,7 +1,7 @@
 # Multi-stage build for efficiency
 
 # Stage 1: Build
-FROM node:26.4-alpine AS builder
+FROM node:26.7-alpine AS builder
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN pnpm run build
 RUN pnpm prune --prod
 
 # Stage 2: Production
-FROM node:26.4-alpine
+FROM node:26.7-alpine
 
 WORKDIR /app
 
