@@ -61,9 +61,18 @@ primary_region = "sjc"
   port = 8080
   path = "/metrics"
 
-# Define scheduled tasks (requires Fly.io Machines feature)
-# To set up the pruning cron job, use:
-# fly machines run . --schedule="0 2 * * *" --entrypoint="node" --arg="dist/scripts/prune-notams.js"
+# Scheduled pruning of expired NOTAMs. `--schedule` accepts only hourly/daily/weekly/
+# monthly, not a cron expression. The batch DELETE needs more headroom than the API's
+# 30s statement timeout, and `--restart no` keeps a failed run waiting for the next
+# window instead of hot-looping against the database. The Machine belongs to no process
+# group, so `fly deploy` leaves it on the image named here; recreate it when the prune
+# script changes. Get the current tag from `fly status -a notams`.
+#
+#   fly machine run registry.fly.io/notams:<deployment-tag> \
+#     --app notams --name notam-prune --region sjc \
+#     --schedule daily --restart no \
+#     --vm-memory 512 --env DB_STATEMENT_TIMEOUT=600000 \
+#     node dist/scripts/prune-notams.js
 
 # Example secrets to set:
 # fly secrets set DATABASE_URL=postgresql://...
