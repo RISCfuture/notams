@@ -1,4 +1,5 @@
 import { withRetry, isRetriableHttpError } from '../utils/retry'
+import { nmsRequestDuration } from '../config/metrics'
 
 type NMSStatus = 'Success' | 'Failure'
 
@@ -21,6 +22,31 @@ export class NMSHttpError extends Error {
     this.status = status
     this.body = body
     this.retriable = retriable
+  }
+}
+
+/** Labels distinguishing the two kinds of outbound NMS call on {@link nmsRequestDuration}. */
+export type NMSOperation = 'data' | 'token'
+
+/**
+ * Fetch an NMS URL while recording {@link nmsRequestDuration}, so upstream FAA latency
+ * can be read on its own rather than inferred from the surrounding poll and DB timings.
+ * The observation ends when response headers arrive; streamed bodies keep downloading
+ * after it. Failed transports are labelled `status="error"`.
+ */
+export async function timedNMSFetch(
+  operation: NMSOperation,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const stopTimer = nmsRequestDuration.startTimer()
+  try {
+    const response = await fetch(url, init)
+    stopTimer({ operation, status: String(response.status) })
+    return response
+  } catch (error) {
+    stopTimer({ operation, status: 'error' })
+    throw error
   }
 }
 
@@ -79,7 +105,7 @@ export async function nmsRequest<T>(
 
   return withRetry(
     async () => {
-      const response = await fetch(url, {
+      const response = await timedNMSFetch('data', url, {
         headers: { Authorization: `Bearer ${token}`, ...headers },
         signal,
       })

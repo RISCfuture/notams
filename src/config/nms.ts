@@ -1,5 +1,6 @@
 import { logger } from './logger'
 import { withRetry, isRetriableHttpError } from '../utils/retry'
+import { timedNMSFetch } from '../services/nms-client'
 
 export interface NMSConfig {
   baseUrl: string
@@ -57,7 +58,7 @@ export class NMSTokenProvider {
 
     const data = await withRetry(
       async () => {
-        const response = await fetch(authUrl, {
+        const response = await timedNMSFetch('token', authUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

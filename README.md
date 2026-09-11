@@ -170,16 +170,23 @@ node dist/scripts/migrate.js
 exit
 ```
 
-### 8. Set Up Pruning Cron Job
+### 8. Set Up the Scheduled Prune Machine
 
 ```bash
-fly machines run . \
-  --schedule="0 2 * * *" \
-  --entrypoint="node" \
-  --arg="dist/scripts/prune-notams.js"
+fly machine run registry.fly.io/notams:<deployment-tag> \
+  --app notams --name notam-prune --region sjc \
+  --schedule daily --restart no \
+  --vm-memory 512 --env DB_STATEMENT_TIMEOUT=600000 \
+  node dist/scripts/prune-notams.js
 ```
 
-This runs the pruning script daily at 2 AM UTC.
+`--schedule` accepts only `hourly`/`daily`/`weekly`/`monthly`, never a cron expression.
+The batch `DELETE` needs more headroom than the API's 30s statement timeout, and
+`--restart no` keeps a failed run waiting for the next window instead of hot-looping
+against the database. Get the deployment tag from `fly status -a notams`; the Machine
+belongs to no process group, so `fly deploy` leaves it on the image named here and it
+must be recreated when the prune script changes. Set `NOTAM_RETENTION_DAYS` to change
+the retention window (default 30).
 
 ## Managing API Tokens
 

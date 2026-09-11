@@ -169,3 +169,15 @@ export const ingestLastSuccessTimestamp = isProduction
       registers: [metricsRegistry],
     })
   : (noopGauge as unknown as Gauge)
+
+// ============ NMS UPSTREAM METRICS ============
+
+export const nmsRequestDuration = isProduction
+  ? new Histogram({
+      name: 'nms_request_duration_seconds',
+      help: 'Duration of outbound FAA NMS HTTP requests in seconds, measured to response headers',
+      labelNames: ['operation', 'status'] as const,
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60],
+      registers: [metricsRegistry],
+    })
+  : (noopHistogram as unknown as Histogram<'operation' | 'status'>)

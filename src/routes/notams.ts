@@ -22,6 +22,15 @@ const querySchema = z.object({
 const notamIdSchema = z.string().min(1)
 
 /**
+ * Ingestion refreshes NOTAMs on `NMS_POLL_INTERVAL_MS` (5 minutes by default), so a short
+ * freshness window lets a client reuse an identical query instead of re-polling for data
+ * that cannot have changed yet. `private` keeps that reuse in the caller's own cache:
+ * these responses are gated by a bearer token, and `public` is the one directive that
+ * would let a shared cache store them and hand them to a caller holding no token at all.
+ */
+const NOTAM_CACHE_CONTROL = 'private, max-age=60'
+
+/**
  * GET /api/notams
  * Query NOTAMs with filters
  */
@@ -63,6 +72,7 @@ router.get('/notams', authenticateToken, async (req: AuthenticatedRequest, res: 
       'NOTAMs queried',
     )
 
+    res.set('Cache-Control', NOTAM_CACHE_CONTROL)
     res.json({
       data: notams,
       pagination: {
@@ -110,6 +120,7 @@ router.get(
         'NOTAM retrieved',
       )
 
+      res.set('Cache-Control', NOTAM_CACHE_CONTROL)
       res.json({ data: notam })
     } catch (error) {
       logger.error({ error }, 'Error retrieving NOTAM')

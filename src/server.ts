@@ -1,4 +1,5 @@
 import express, { Express } from 'express'
+import compression from 'compression'
 import * as Sentry from '@sentry/node'
 import { logger } from './config/logger'
 import { errorHandler } from './middleware/error-handler'
@@ -6,6 +7,7 @@ import { metricsMiddleware } from './middleware/metrics'
 import healthRouter from './routes/health'
 import metricsRouter from './routes/metrics'
 import notamsRouter from './routes/notams'
+import rootRouter from './routes/root'
 
 export const createServer = (): Express => {
   const app = express()
@@ -19,6 +21,11 @@ export const createServer = (): Express => {
       integrations: [Sentry.expressIntegration()],
     })
   }
+
+  // Owned by the app rather than assumed from the host: Fly's edge proxy gzips
+  // responses today, but nothing in this repo guarantees that survives a platform
+  // change or a move off Fly.
+  app.use(compression())
 
   // Body parsing middleware
   app.use(express.json())
@@ -41,6 +48,7 @@ export const createServer = (): Express => {
   app.use(metricsMiddleware)
 
   // Routes
+  app.use('/', rootRouter)
   app.use('/', metricsRouter)
   app.use('/', healthRouter)
   app.use('/api', notamsRouter)
